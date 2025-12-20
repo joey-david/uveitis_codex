@@ -71,6 +71,7 @@ class UveitisViewer:
         self.image_paths = image_paths
         self.labels_dir = labels_dir
         self.label_map = label_map
+        self.color_map = self.build_color_map()
         self.index = 0
 
         self.fig, self.ax = plt.subplots()
@@ -87,6 +88,21 @@ class UveitisViewer:
         self.fig.canvas.mpl_connect("key_press_event", self.on_key)
 
         self.show_index(0)
+
+    def build_color_map(self):
+        names = sorted(set(self.label_map.values()))
+        cmap = plt.get_cmap("tab20")
+        color_map = {}
+        for i, name in enumerate(names):
+            color_map[name] = cmap(i % cmap.N)
+        return color_map
+
+    def color_for_label(self, label_name, class_id):
+        color = self.color_map.get(label_name)
+        if color is not None:
+            return color
+        cmap = plt.get_cmap("tab20")
+        return cmap(class_id % cmap.N)
 
     def on_key(self, event):
         if event.key in ("left", "a"):
@@ -116,7 +132,8 @@ class UveitisViewer:
         label_counts = Counter()
 
         for i, (class_id, points) in enumerate(labels):
-            color = plt.cm.tab20(i % 20)
+            label_name = self.label_map.get(class_id, f"unknown_{class_id}")
+            color = self.color_for_label(label_name, class_id)
             pixel_points = [(x * width, y * height) for x, y in points]
             poly = Polygon(
                 pixel_points,
@@ -127,7 +144,6 @@ class UveitisViewer:
             )
             self.ax.add_patch(poly)
 
-            label_name = self.label_map.get(class_id, f"unknown_{class_id}")
             label_counts[label_name] += 1
             min_x = min(x for x, _y in pixel_points)
             min_y = min(y for _x, y in pixel_points)
