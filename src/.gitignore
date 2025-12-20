@@ -1,0 +1,12 @@
+.venv/
+# 1) Ignore everything under datasets
+/dataset/*
+
+# 2) Unignore subdirectories so we can apply further rules inside them
+!/dataset/**/
+
+# 3) Re‐ignore all files inside those subdirectories
+/dataset/**/*.*
+
+# 4) Finally, unignore txt files
+!/dataset/**/*.txt

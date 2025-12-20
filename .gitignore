@@ -1,0 +1,40 @@
+# 1) Ignore all jpg and png files under datasets and its subdirectories
+#    (this is to prevent committing large image files)
+datasets/**/*.jpg
+datasets/**/*.jpeg
+datasets/**/*.png
+datasets/**/*.tif
+datasets/ND_UWFI_dataset/base_dataset/
+datasets/ND_UWFI_dataset/extended_dataset/
+
+
+
+# 1) Ignore everything under datasets
+src/yolo_idrid_poc/dataset/*
+# 2) Unignore subdirectories so we can apply further rules inside them
+!src/yolo_idrid_poc/dataset/**/
+# 3) Re‐ignore all files inside those subdirectories
+src/yolo_idrid_poc/dataset/**/*.*
+# 4) Finally, unignore txt files
+!src/yolo_idrid_poc/dataset/**/*.txt
+
+/** */.venv
+
+**/*.pt
+**/*.pth
+*.pth
+**/*.pyc
+**/runs
+**/__pycache__
+.venv/
+.pytest_cache/
+env/            
+venv/
+src/labeling/build/
+src/labeling/dist/
+src/labeling/*.spec
+mtsn_model.pth
+
+# node_modules
+node_modules/
+package-lock.json

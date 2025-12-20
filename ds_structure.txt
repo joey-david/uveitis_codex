@@ -1,0 +1,59 @@
+…/research/uveitis-disp ❯ ls
+Permissions Size User Date Modified Name
+drwxrwxr-x     - joey 20 Dec 15:28   dataset
+drwxrwxr-x     - joey 13 Sep 13:40   docs
+drwxrwxr-x     - joey  7 Sep 16:31   literature
+drwxr-xr-x     - joey 20 Dec 15:00   old_ignore
+drwxrwxr-x     - joey 13 Sep 13:33  󰣞 src
+
+…/research/uveitis-disp ❯ tree -L 3 dataset/
+dataset/
+├── Images
+│   ├── AMD
+│   │   ├── AMD-001.jpg
+│   │   ├── AMD-002.jpg
+│   │   ├── ...
+│   │   └── AMD-100.jpg
+│   ├── DR
+│   │   ├── DR-001.jpg
+│   │   ├── DR-002.jpg
+│   │   ├── ...
+│   │   └── DR-100.jpg
+│   ├── Healthy
+│   │   ├── Healthy-001.jpg
+│   │   ├── Healthy-002.jpg
+│   │   ├── ...
+│   │   └── Healthy-100.jpg
+│   ├── PM
+│   │   ├── PM-001.jpg
+│   │   ├── PM-002.jpg
+│   │   ├── ...
+│   │   └── PM-100.jpg
+│   ├── RD
+│   │   ├── RD-001.jpg
+│   │   ├── RD-002.jpg
+│   │   ├── ...
+│   │   └── RD-100.jpg
+│   ├── RVO
+│   │   ├── RVO-001.jpg
+│   │   ├── RVO-002.jpg
+│   │   ├── ...
+│   │   └── RVO-100.jpg
+│   └── Uveitis
+│       ├── Uveitis-001.jpg
+│       ├── Uveitis-002.jpg
+│       ├── ...
+│       └── Uveitis-100.jpg
+├── Labels
+│   └── Uveitis
+│       ├── Uveitis-001.txt
+│       ├── Uveitis-002.txt
+│       ├── ...
+│       └── Uveitis-100.txt
+├── Metadata
+│   ├── Demographics of the participants.xlsx
+│   ├── Ground Truth.xlsx
+│   └── Individual Quality Assessment.xlsx
+└── variables.csv
+
+12 directories, 802 files

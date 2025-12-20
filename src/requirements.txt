@@ -1,0 +1,28 @@
+# Deep learning and computer vision
+ultralytics  # YOLO models
+torch        # PyTorch for deep learning
+torchvision  # Computer vision utilities for PyTorch
+timm  # Model zoo with many pretrained backbones (ConvNeXt/ViT/etc.)
+torch_geometric
+torchmetrics
+numpy        # Numerical computing
+opencv-python  # OpenCV for image processing
+pillow       # PIL/Pillow for image manipulation
+matplotlib   # Plotting and visualization
+albumentations  # Advanced image augmentations
+graphviz     # Graph visualization library
+torchviz     # Visualize PyTorch model graphs
+tqdm         # Progress bar for loops
+
+# Data processing
+pandas       # Data manipulation and analysis
+pytest
+numpy 
+
+# Notebook support
+ipywidgets   # Interactive widgets for Jupyter notebooks
+jupyter      # Jupyter notebook
+scikit-learn  # Machine learning library
+scikit-image  # Image processing library
+PyQt5         # PyQt5 for GUI applicatio
+pycocotools  # COCO dataset tools
