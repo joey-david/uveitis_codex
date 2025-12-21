@@ -1,0 +1,1 @@
+This project will eventually be trained on a remote 40GB A100 via docker, as no root access to the GPU is granted. You will need to keep this in mind and implement the corresponding docker infrastructure throughout your implementation of the project, as well as a detailed guide of which commands to run, what they will output and where.
