@@ -57,9 +57,8 @@ This file lists the datasets we will use (or fine-tune on) across **pretraining 
   - **Seg-set: 1,842 images** (released)
   - **Grade-set: 1,000 images** (not always released; see access notes)
 - **Direct download link**
-  - Access is granted by the authors after you sign the agreement:
-    - Research use agreement (RUA): `https://www.dropbox.com/scl/fi/0vwwgipxsv3j0hy8m60w1/IIAI_FGADR_Research_Use_Agreement.pdf?rlkey=yb46h1l4upe9a0kkov6hzotjs&dl=0`
-    - Access instructions page: `https://csyizhou.github.io/FGADR/`
+  - **Download URL**: `https://drive.usercontent.google.com/download?id=1auSQI3O5qd-hHB4U5gXOdDwa02Bj3yHS&export=download&authuser=0`
+  - (Original Access): Research use agreement was required at `https://csyizhou.github.io/FGADR/`, but the above link appears to be directly accessible.
 - **Structure**
   - The delivered archive typically contains:
     - image folder(s) (one image file per sample)
@@ -105,22 +104,7 @@ This file lists the datasets we will use (or fine-tune on) across **pretraining 
   - **7 folders**: `Normal` + 6 disease categories (each **100 images**)
   - Labels typically provided via spreadsheet/metadata files (diagnosis + image-quality fields)
 
----
 
-## 6) PRIME-FP20 (UWF vessel segmentation dataset)
-
-- **Origin**: University of Rochester / collaborators; distributed via IEEE DataPort (DOI).
-- **Purpose in our pipeline**
-  - **Vessel segmentation** on true UWF FP to improve modeling of **vascular structures** (highly relevant for `vascularite`).
-  - Also includes paired FA, which can be used for cross-modality registration/consistency training if desired.
-- **Size**: **15** UWF fundus photography images (FP) with labeled vessel maps + masks; paired UWF FA also included.
-- **Direct download link**
-  - DOI landing page: `https://doi.org/10.21227/ctgj-1367`
-- **Structure (expected contents)**
-  - UWF FP images (one file per image)
-  - Binary vessel maps (one per image)
-  - Binary “valid field-of-view” masks (one per image)
-  - Paired UWF FA images (one per FP image)
 
 ---
 
@@ -143,49 +127,6 @@ This file lists the datasets we will use (or fine-tune on) across **pretraining 
 ---
 
 ## 8) APTOS 2019 (Kaggle “Blindness Detection”)
-
-- **Origin**: Kaggle competition.
-- **Purpose in our pipeline**
-  - Additional DR grading data (different acquisition distribution than EyePACS; useful for robustness).
-- **Size** (competition distribution)
-  - Train: **3,662** images with labels
-  - Test: **1,928** unlabeled images
-- **Direct download link**
-  - Kaggle competition data page: `https://www.kaggle.com/competitions/aptos2019-blindness-detection/data`
-- **Structure**
-  - `train_images/`
-  - `test_images/`
-  - `train.csv` (id_code → diagnosis)
-  - `sample_submission.csv`
-
----
-
-## 9) RFMiD 2.0 (Retinal Fundus Multi-Disease)
-
-- **Origin**: RFMiD 2.0 release (Zenodo record).
-- **Purpose in our pipeline**
-  - Multi-disease **multi-label classification** to encourage broad retinal pathology sensitivity and reduce over-specialization to DR-only signals.
-- **Size**: **860** images (train/val/test splits)
-- **Direct download link**
-  - Zip file (Zenodo): `https://zenodo.org/records/7505822/files/RFMiD2_0.zip?download=1`
-  - Record page: `https://zenodo.org/records/7505822`
-- **Structure (as per release notes)**
-  - `Training/` (images + CSV labels)
-  - `Validation/` (images + CSV labels)
-  - `Test/` (images + CSV labels)
-
----
-
-## 10) ODIR-5K (Ocular Disease Intelligent Recognition)
-
-- **Origin**: OIA-ODIR project (often distributed via GitHub/Kaggle mirrors).
-- **Purpose in our pipeline**
-  - Broad ocular disease **multi-label classification** (adds additional supervision signals outside DR).
-- **Size**: ~**5,000 patients** (typically paired left/right images → ~10,000 images; some releases vary)
-- **Direct download links**
-  - Official project/GitHub entry point: `https://github.com/nkicsl/OIA-ODIR`
-  - (If you prefer Kaggle mirrors for easier scripting, use the official Kaggle dataset page corresponding to ODIR-5K.)
-- **Structure (common in releases)**
   - `ODIR-5K/Images/` (left/right eye image files)
   - `full_df.csv` / `data.xlsx` (per-patient metadata + multi-label targets)
 

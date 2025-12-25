@@ -1,0 +1,22 @@
+# Data Download & Processing
+requests
+tqdm
+kaggle
+pandas
+numpy
+
+# Deep Learning & Computer Vision
+torch
+torchvision
+opencv-python
+scikit-learn
+timm
+
+# MMRotate Stack (Install order matters generally, use mimicking for pip)
+# These often require matching CUDA versions.
+# Suggest installing via mim if possible, but listing here for reference.
+openmim
+mmengine
+mmcv
+mmdet
+mmrotate

@@ -1,167 +1,131 @@
-IMPORTANT: WHILE THE DEVELOPMENT OCCURS LOCALLY, THE EVENTUAL PROCESSING/ETC WILL NEED TO BE RUN ON A REMOTE SERVER (SEE AGENTS.MD). ALL THAT IS DEVELOPED HERE SHOULD BE CONCISELY BUT WELL-DOCUMENTED, AND EASILY REPRODUCIBLE ON THE REMOTE SERVER. The datasets will be redownloaded and processed there, with only minimal dev local downloads for testing and well function assertion.
-Throughout the implementation, you should develop tests and benchmarks to assess the performance of each of the intermediate and final models after their training/adaptation.
+## Updated definitive plan (RETFound ViT + UWF-700 + 3 datasets)
 
-## 0) Standardize everything into one geometry + data format
+**Datasets you will use (fixed):**
 
-**Tooling:** OpenCV + MMRotate data format
+1. **UWF-700** (given)
+2. **DeepDRiD** (use both its regular fundus + UWF subset)
+3. **FGADR** (lesion segmentation masks)
+4. **EyePACS** (DR grading, classification-only at scale)
 
-1. **Convert your label format (`cls xyxyxyxy` normalized polygon)** → rotated box `(cx, cy, w, h, θ)` in pixels using `cv2.minAreaRect`, and store in an MMRotate-supported angle convention (use **le90** everywhere).
-2. Implement a **UWF tiling loader** (train + test):
+* **your 100 UWF uveitis images** (OBB labels)
 
-   * fixed tile size (e.g., 1024–1536 px), overlapping stride
-   * map tile coords ↔ full-image coords for OBBs
-3. Fix a **patient-level split** and never change it.
+**Core tooling (fixed):**
 
-(Everything after this assumes “OBB = le90” and “training = tiles, inference = tiles + merge”.)
-
----
-
-## 1) Choose the backbone: RETFound ViT-L as the one backbone for everything
-
-**Backbone:** **RETFound ViT-L/16 MAE weights** (open weights + code). ([GitHub][1])
-
-Why: it’s retina-specific and label-efficient, which is exactly your regime.
+* **Backbone:** RETFound ViT (encoder)
+* **Detector:** **MMRotate Oriented R-CNN** (angle convention: **le90**)
+* **Rotated box regression:** **GWD loss** (robust to lax/noisy boxes)
+* **Training/inference:** tile-based UWF pipeline + merge
 
 ---
 
-## 2) UWF domain adaptation (self-supervised MAE continuation) on real UWF images
+## Stage 0 — Unify geometry and data loading
 
-**Datasets (UWF, open):**
+1. Convert your `cls xyxyxyxy` polygons → rotated boxes `(cx, cy, w, h, θ)` (pixels) using `minAreaRect`, store as **le90**.
+2. Implement tiling:
+   * train on overlapping tiles
+   * inference on tiles + merge (rotated NMS / WBF variant)
+3. Fix patient-level split and evaluation protocol.
 
-* **UWF-700** (700 high-res UWF images; open access via figshare/Sci Data). ([Nature][2])
-* **DeepDRiD UWF subset (256 UWF images)**. ([ScienceDirect][3])
-* **Your 100 UWF uveitis images** (use them as unlabeled here too).
-
-**Action:** continue **MAE pretraining** starting from RETFound weights (same architecture) on the union of these UWF images.
-
-Goal: make the encoder “UWF-native” before any supervised task.
+**Metric:** **100% label validity** (0 parsing errors) & Visual verification of ~20 random samples.
 
 ---
 
-## 3) Lesion segmentation pretraining (dense supervision) for transferable lesion morphology
+## Stage 1 — Make RETFound “UWF-native” (self-supervised)
 
-**Framework:** train a segmentation model whose **encoder is RETFound (from Step 2)**.
+**Initialize encoder:** RETFound ViT weights.
+**Train objective:** MAE continuation (same style as RETFound).
+**Training images (unlabeled):**
+* UWF-700 (all)
+* DeepDRiD **UWF subset** (all)
+* your uveitis UWF images (ignore labels, use as unlabeled too)
 
-**Segmentation datasets (open):**
-
-* **FGADR Seg-set** (1842 images, fine-grained lesion masks incl. hemorrhage/exudates + advanced lesions). ([CSYizhou][4])
-* **DDR lesion subset** (pixel-level lesions available; DDR also provides broader DR resources). ([GitHub][5])
-* **IDRiD** (ISBI 2018 lesion segmentation: hemorrhages, hard/soft exudates, microaneurysms). ([Idrid][6])
-* **E-ophtha EX** (exudate masks). ([ADCIS][7])
-* **DiaRetDB1** (lesion masks; small but helpful diversity). ([Kaggle][8])
-
-**Task definition:** multi-class lesion segmentation for the DR lesion vocabulary (at minimum: hemorrhage, hard exudate, soft exudate, microaneurysm; plus FGADR’s fine-grained lesions if you include them).
-
-**Output of Step 3:** a RETFound encoder that is explicitly trained to represent **lesion boundaries and texture**, not just image-level disease.
+**Metric:** **reconstruction MSE loss** (monitor convergence; target < baseline on natural images).
 
 ---
 
-## 4) Convert those segmentation masks into a large rotated-box pretraining set
+## Stage 2 — Lesion morphology pretraining (segmentation on FGADR)
 
-For every segmentation dataset image:
+**Model:** UWF-adapted RETFound encoder + lightweight segmentation decoder/head.
+**Dataset:** **FGADR segmentation masks**.
+**Task:** multi-class lesion segmentation (FGADR lesion taxonomy).
 
-1. connected components per lesion class
-2. each component → `minAreaRect` → rotated box
-3. keep boxes above a min area threshold (remove tiny specks/noise)
+Train encoder with a lower LR than the decoder (but you do update it).
 
-This produces **tens of thousands of pseudo-OBBs** (especially from FGADR + DDR), aligned with your final detection objective.
-
----
-
-## 5) Train a DR classifier teacher (separate model) to inject classification-only signal cleanly
-
-This is where “classification-only DR datasets” become useful without corrupting your localization-pretrained backbone.
-
-**Teacher model:** RETFound encoder (start from Step 2 weights) + classification head.
-
-**Classification datasets (open / widely used):**
-
-* **EyePACS / Kaggle Diabetic Retinopathy Detection** (image-level DR grades). ([Kaggle][9])
-* **DDR grading** (13,673 images, DR severity). ([Kaggle][10])
-* **APTOS 2019** (3,662 images, DR grades). ([Academic Torrents][11])
-* Add **DeepDRiD regular + UWF labels** for explicit UWF grading signal. ([ScienceDirect][3])
-* Add **ODIR-5K** for multi-disease retinal semantics (helps robustness beyond DR). ([odir2019.grand-challenge.org][12])
-
-**Output of Step 5:** a strong frozen classifier teacher.
+**Metric:** **Dice Score > 0.70** (mean across lesion classes on validation split).
 
 ---
 
-## 6) Final model: Oriented R-CNN in MMRotate, initialized from lesion-seg RETFound
+## Stage 3 — Convert FGADR masks → rotated boxes (OBB pretraining set)
 
-**Detector framework:** **MMRotate** with **Oriented R-CNN**. ([GitHub][13])
+For each FGADR lesion class:
+1. connected components per mask
+2. each component → rotated min-area rectangle → OBB (le90)
+3. filter tiny/noise components
 
-**Why this specific detector:** two-stage rotated detection tends to be more data-efficient and stable for small/rare objects than one-stage OBB YOLO.
-
-### 6.1 Pretrain detector on pseudo-OBBs (Step 4)
-
-* Backbone init: **RETFound encoder from Step 3** (lesion-seg pretrained).
-* Train Oriented R-CNN on the large pseudo-OBB set first.
-
-### 6.2 Fine-tune detector on your uveitis OBB dataset (final target)
-
-**Core choices (decided):**
-
-* **Use GWD loss** for rotated box regression to tolerate lax/noisy boxes and still learn when overlaps are poor. ([Proceedings of Machine Learning Research][14])
-* **Angle convention:** le90 throughout (consistent training/inference).
-* **Training/inference:** tile-based + merge.
-
-### 6.3 Add classifier-teacher distillation during uveitis fine-tune (this is the “classification-only transfer”)
-
-During uveitis detector training, compute an **image-level presence score** per symptom by aggregating box confidences over tiles (e.g., `1 - Π(1 - p_i)`), and add a loss to match the **teacher’s image-level probabilities** for related categories (DR lesions and/or broader disease labels).
-
-This is how you exploit EyePACS/APTOS/DDR classifiers without needing any localization labels from them.
+**Metric:** **Box Count Distribution** (verify # of lesions per image matches segmentation statistics).
 
 ---
 
-## 7) Vessel prior for vasculitis (baked in, not optional)
+## Stage 4 — Pretrain the final detector on FGADR-derived OBBs
 
-For **vascularite**, you want vessel-context.
+**Model:** MMRotate **Oriented R-CNN**
+**Backbone init:** encoder from Stage 2
+**Train on:** FGADR-derived OBB detection set (Stage 3)
+**Loss:** include **GWD** for rotated box regression
 
-**Train a vessel segmentation model** and run it as preprocessing to produce a vessel probability map channel.
-
-* **DRIVE** (classic vessel segmentation). ([drive.grand-challenge.org][15])
-* **PRIME-FP20** (UWF vessel segmentation; small but UWF-specific). ([University Lab Sites][16])
-
-Then feed `(RGB + vessel_map)` into the detector (4-channel input) during uveitis fine-tune and inference.
+**Metric:** **Rotated mAP50 > 30%** (on FGADR val set; this confirms the detector learns lesion concepts).
 
 ---
 
-## 8) Deliverable model and evaluation
+## Stage 5 — Train a classifier teacher (EyePACS + DeepDRiD) for distillation
 
-**Final deliverable:** MMRotate Oriented R-CNN (RETFound backbone), trained:
+**Teacher model:** RETFound-based classifier (separate from the detector).
 
-1. UWF MAE adaptation →
-2. lesion segmentation →
-3. pseudo-OBB pretrain →
-4. uveitis OBB fine-tune (GWD) + classifier distillation + vessel-map channel
+1. **Train on EyePACS** for DR grading (big scale signal).
+2. **Fine-tune on DeepDRiD regular fundus + then DeepDRiD UWF** (so the teacher doesn’t collapse on UWF appearance).
 
-**Report:** rotated mAP plus clinically useful sensitivity at fixed FP/image, on the fixed patient split.
+**Metric:** **AUC > 0.85** or **Quadratic Weighted Kappa > 0.80** (on DeepDRiD UWF validation).
 
 ---
 
-### Why this plan matches your exact constraints
+## Stage 6 — Final uveitis training (your real target)
 
-* Uses **only open/public datasets** (Kaggle/Grand-Challenge/SciData/official academic releases). ([Idrid][6])
-* Converts segmentation → OBB systematically (not hand-wavy).
-* Uses classification datasets **without pretending they have localization** (teacher distillation).
-* Explicitly addresses **UWF domain shift** with real UWF corpora before supervised training. ([Nature][2])
-* Uses a rotated detector stack that’s mature and supports the rotated-loss choices you need. ([GitHub][13])
+**Student model:** Oriented R-CNN from Stage 4.
+**Train on:** your 100 uveitis UWF images (tile-based) with your OBB labels.
+**Key choices (fixed):**
+* **GWD** for box regression (handles “region boxes” better than plain Smooth-L1)
+* class-balanced sampling / reweighting (your long tail is extreme)
 
-If you want, paste your exact image resolution + tile size you’re currently using, and I’ll pin down concrete training hyperparameters (LRs, freeze schedule, tiling stride, augmentation set) consistent with MMRotate + ViT.
+**Add distillation from Stage 5 teacher during this training:**
+* For each full image, aggregate the detector’s tile predictions into an image-level “abnormality / DR-like lesion” score.
+* Add a loss to match the teacher’s probabilities (regularizes features and reduces false positives).
 
-[1]: https://github.com/openmedlab/RETFound_MAE?utm_source=chatgpt.com "RETFound - A foundation model for retinal image"
-[2]: https://www.nature.com/articles/s41597-024-04113-2?utm_source=chatgpt.com "Open ultrawidefield fundus image dataset with disease ..."
-[3]: https://www.sciencedirect.com/science/article/pii/S2666389922001040?utm_source=chatgpt.com "DeepDRiD: Diabetic Retinopathy—Grading and Image ..."
-[4]: https://csyizhou.github.io/FGADR/?utm_source=chatgpt.com "FGADR Dataset - Look Deeper into Eyes. - GitHub Pages"
-[5]: https://github.com/nkicsl/DDR-dataset?utm_source=chatgpt.com "nkicsl/DDR-dataset: A General-purpose High-quality ..."
-[6]: https://idrid.grand-challenge.org/?utm_source=chatgpt.com "Home - IDRiD - Grand Challenge"
-[7]: https://www.adcis.net/en/third-party/e-ophtha/?utm_source=chatgpt.com "E-ophtha"
-[8]: https://www.kaggle.com/datasets/nguyenhung1903/diaretdb1-v21?utm_source=chatgpt.com "DiaRetDB1 V2.1"
-[9]: https://www.kaggle.com/c/diabetic-retinopathy-detection?utm_source=chatgpt.com "Diabetic Retinopathy Detection"
-[10]: https://www.kaggle.com/datasets/mariaherrerot/ddrdataset?utm_source=chatgpt.com "DDR dataset"
-[11]: https://academictorrents.com/details/d8653db45e7f111dc2c1b595bdac7ccf695efcfd?utm_source=chatgpt.com "APTOS 2019 diabetic retinopathy dataset"
-[12]: https://odir2019.grand-challenge.org/dataset/?utm_source=chatgpt.com "Dataset-数据集 - ODIR-2019"
-[13]: https://github.com/open-mmlab/mmrotate?utm_source=chatgpt.com "open-mmlab/mmrotate: OpenMMLab Rotated Object ..."
-[14]: https://proceedings.mlr.press/v139/yang21l/yang21l.pdf?utm_source=chatgpt.com "Rethinking Rotated Object Detection with Gaussian ..."
-[15]: https://drive.grand-challenge.org/?utm_source=chatgpt.com "DRIVE - Grand Challenge: Introduction"
-[16]: https://labsites.rochester.edu/gsharma/research/computer-vision/deep-retinal-vessel-segmentation-for-ultra-widefield-fundus-photography/?utm_source=chatgpt.com "Deep Retinal Vessel Segmentation For Ultra-Widefield ..."
+**Metric:** **Rotated mAP50** (primary) + **Sensitivity @ 1.0 FP/image** (clinical relevance).
+
+---
+
+## Hyperparameters & Guidelines (for 4000x3000px Input)
+
+Given the high resolution (**4000x3000px**), you **must** use a tiling approach.
+
+### 1. Tiling Strategy
+*   **Tile Size:** `1024x1024` pixels.
+*   **Stride:** `768` pixels (25% overlap).
+*   **Tiles per Image:** Approx `5x4 = 20` tiles per image (covering 4000x3000).
+
+### 2. Model Input Resolution
+RETFound ViT-L is computionally heavy. You should **resize tiles** before feeding to the network.
+*   **Training Input:** Resize `1024x1024` tile → **`512x512`** (or `224x224` if OOM).
+    *   *Note:* `512x512` captures more fine-grained lesion detail (MA/microaneurysms) than `224`.
+    *   You will need to interpolate RETFound's positional embeddings from 224 to 512 (standard ViT practice).
+
+### 3. Detector Anchors & Scales
+*   **Anchor Scales:** Since we resize `1024 -> 512` (0.5x scale), ensure anchor sizes cover the *effective* lesion sizes.
+*   **Smallest Lesions:** A 10px microaneurysm becomes 5px. Ensure the RPN anchor generator includes small scales (e.g., scale 4 or 8).
+
+### 4. Training Config (Guidelines)
+*   **Batch Size:** 2-4 (per GPU) for ViT-L @ 512px. Use **Gradient Accumulation** to effectively reach batch 16+.
+*   **Learning Rate:** ViT requires lower LR than ResNet. Start `1e-4` (AdamW) with `0.05` weight decay. Layer-wise LR decay (lower LR for earlier backbone layers) is highly recommended for transfer learning.
+*   **Epochs:**
+    *   Stage 1 (MAE): 400-800 epochs (needs long training).
+    *   Stage 4/6 (Detection): 12-24 epochs (1x or 2x schedule) is usually sufficient if pretraining was good.

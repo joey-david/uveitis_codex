@@ -6,7 +6,7 @@ datasets/**/*.png
 datasets/**/*.tif
 datasets/ND_UWFI_dataset/base_dataset/
 datasets/ND_UWFI_dataset/extended_dataset/
-
+datasets/raw/
 
 
 # 1) Ignore everything under datasets

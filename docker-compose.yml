@@ -1,0 +1,12 @@
+services:
+  dataset-prep:
+    build: .
+    volumes:
+      - ./data:/app/data
+      - ./datasets:/app/datasets
+      # Mount kaggle.json if it exists locally in root or ~/.kaggle
+      # Users might need to adjust this path or copy kaggle.json to the project root
+      - ./kaggle.json:/root/.kaggle/kaggle.json
+    environment:
+      - KAGGLE_CONFIG_DIR=/root/.kaggle
+    tty: true
