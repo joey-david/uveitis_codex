@@ -60,15 +60,49 @@ def download_kaggle_dataset(dataset_id, output_dir, limit_mb=None):
                     break
                     
                 logger.info(f"Downloading {file.name} ({file.total_bytes} bytes)...")
-                # dataset_download_file downloads to current dir or path, doesn't return size easily without checking file
-                api.dataset_download_file(dataset_id, file.name, path=output_dir, force=True, quiet=False)
                 
-                # Check actual downloaded file size
-                fpath = os.path.join(output_dir, file.name)
-                if os.path.exists(fpath):
-                    downloaded_bytes += os.path.getsize(fpath)
-                elif os.path.exists(fpath + ".zip"):
-                     downloaded_bytes += os.path.getsize(fpath + ".zip")
+                success = False
+                # Attempt 1: Full path
+                try:
+                    api.dataset_download_file(dataset_id, file.name, path=output_dir, force=True, quiet=False)
+                    success = True
+                except Exception as e:
+                    if "404" in str(e):
+                         logger.warning(f"Failed to download {file.name} using full path (404).")
+                         # Attempt 2: Basename
+                         fname = os.path.basename(file.name)
+                         if fname != file.name:
+                             logger.info(f"Retrying with basename: {fname}")
+                             try:
+                                 api.dataset_download_file(dataset_id, fname, path=output_dir, force=True, quiet=False)
+                                 success = True
+                             except Exception as e2:
+                                 logger.warning(f"Failed with basename: {e2}")
+                    else:
+                        logger.warning(f"Failed to download {file.name}: {e}")
+
+                if success:
+                    # Check actual downloaded file size
+                    fpath = os.path.join(output_dir, file.name)
+                    # Also check basename path if that's where it landed (Kaggle API quirks)
+                    fpath_base = os.path.join(output_dir, os.path.basename(file.name))
+                    
+                    found_size = 0
+                    if os.path.exists(fpath):
+                        found_size = os.path.getsize(fpath)
+                    elif os.path.exists(fpath + ".zip"):
+                        found_size = os.path.getsize(fpath + ".zip")
+                    elif os.path.exists(fpath_base):
+                         found_size = os.path.getsize(fpath_base)
+                    elif os.path.exists(fpath_base + ".zip"):
+                         found_size = os.path.getsize(fpath_base + ".zip")
+                    
+                    if found_size > 0:
+                        downloaded_bytes += found_size
+                    else:
+                        logger.warning("Download reported success but file not found on disk.")
+                else:
+                    logger.warning(f"Skipping {file.name} due to download errors during verification.")
                      
         else:
              # Competition - harder to list files granularly via some API versions, but let's try
@@ -148,6 +182,10 @@ def main():
                  status = "EXISTS"
             else:
                 try:
+                    if info['id'] == 'andreivann/eyepacs' and not args.verify_size_mb:
+                        logger.info("NOTE: The EyePACS dataset is approximately 34GB.")
+                        logger.info("The download might appear frozen while Kaggle prepares the archive. Please be patient (can take hours).")
+                    
                     download_kaggle_dataset(info['id'], str(target_path), limit_mb=args.verify_size_mb)
                     status = "SUCCESS"
                 except Exception as e:
