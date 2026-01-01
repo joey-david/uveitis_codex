@@ -36,4 +36,4 @@ We use a collection of public retinal datasets for pretraining and domain adapta
     ```bash
     python datasets/standardize_datasets.py
     ```
-    *Supported: UWF-700, IDRiD, EyePACS, APTOS, DeepDRiD, FGADR, RFMiD, ODIR-5K.*
+    *Supported: UWF-700, DeepDRiD, FGADR, EyePACS, Uveitis-DISP (manual).*

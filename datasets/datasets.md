@@ -1,164 +1,39 @@
-# Datasets used in the uveitis UWF OBB-localization pipeline
+# Datasets used in the RETFound → UWF uveitis OBB pipeline
 
-This file lists the datasets we will use (or fine-tune on) across **pretraining → lesion/structure segmentation → DR multi-task training → final uveitis OBB localization**.
+## UWF-700 (Open ultrawidefield fundus image dataset with disease diagnosis & image quality assessment)
+**Used for:** Stage 1 (self-supervised MAE continuation) to adapt RETFound to ultra-wide-field appearance (periphery, illumination, artifacts).  
+**Why it matters:** This is the “UWF-native” anchor dataset for reducing the 45°→200° domain gap before any supervised training.  
+**Get it:** Springer Nature Figshare record (article ID `26936446`). Download via Figshare API (fully scriptable).  
+- Script: `python download_uwf700.py` (downloads into `datasets/raw/UWF-700/`).  
+- Landing page: https://springernature.figshare.com/articles/dataset/Open_ultrawidefield_fundus_image_dataset_with_disease_diagnosis_and_clinical_image_quality_assessment/26936446  
+- CLI/Python: query metadata + download each `download_url` (see Figshare API docs): https://info.figshare.com/user-guide/how-to-use-the-figshare-api/
 
-> Notes on “direct download links”
-> - Some datasets are **truly direct** (Zenodo/DOI/GitHub-archive links).
-> - Some are **non-commercial research only** and require a form / signed agreement; in those cases the link is the official access point.
+## DeepDRiD (regular fundus + UWF; grading + quality)
+**Used for:** Stage 1 (add DeepDRiD-UWF images into MAE continuation) and Stage 5 (train/fine-tune the DR classifier teacher on regular fundus, then adapt teacher on DeepDRiD-UWF).  
+**Why it matters:** It provides both standard fundus and UWF distributions under one dataset, making it ideal for domain-bridging and teacher UWF-competency.  
+**Get it:** GitHub repo + releases (scriptable via `git` or GitHub CLI).  
+- Script: `python download_deepdrid.py` (downloads into `datasets/raw/DeepDRiD/`).  
+- Repo: https://github.com/deepdrdoc/DeepDRiD  
+- Releases: https://github.com/deepdrdoc/DeepDRiD/releases  
+- Example (GitHub CLI): `gh release download v1.1 -R deepdrdoc/DeepDRiD`
 
----
+## FGADR Seg-set (Fine-Grained Annotated Diabetic Retinopathy)
+**Used for:** Stage 2 (lesion segmentation pretraining on masks), Stage 3 (convert masks→OBBs), Stage 4 (pretrain Oriented R-CNN on FGADR-derived OBBs).  
+**Why it matters:** Dense lesion masks teach morphology and boundaries; converting them to rotated boxes aligns pretraining with your final OBB objective.  
+**Get it:** Access-controlled but non-commercial research friendly: sign and email the form; you receive a download link (then `wget`/`curl` works).  
+- Script: `python download_fgadr.py --manual` (prints access instructions; place data in `datasets/raw/FGADR/`).  
+- Landing page / access instructions: https://csyizhou.github.io/FGADR/
 
-## 1) Uveitis-DISP (Labeling of the Uveitis/ entries of OUWF)
+## EyePACS / Kaggle Diabetic Retinopathy Detection (DR grading at scale)
+**Used for:** Stage 5 (train the classifier teacher at scale) and Stage 6 (distill teacher probabilities into the uveitis detector during fine-tuning).  
+**Why it matters:** Huge image-level supervision; distillation injects “what abnormal looks like” without needing localization labels.  
+**Get it:** Kaggle competition data (scriptable via Kaggle API).  
+- Script: `python download_eyepacs.py` (downloads into `datasets/raw/EyePACS/`).  
+- Competition: https://www.kaggle.com/c/diabetic-retinopathy-detection  
+- Example (Kaggle CLI): `kaggle competitions download -c diabetic-retinopathy-detection`
 
-- **Origin**: your project (“uveitis-disp”)
-- **Purpose**: target-task fine-tuning and evaluation for **uveitis symptom localization** on UWF fundus images using **oriented bounding boxes (OBBs)**.
-- **Size**: **100** labeled UWF images (your current description)
-- **Direct download link**: c.f. OUWF*
-- **Structure (as used by your loader)**
-  - `Images/Uveitis/*.jpg` (or `.png`) — UWF images
-  - `Labels/Uveitis/Uveitis-XXX.txt` — one file per image
-  - Each label line: `cls x1 y1 x2 y2 x3 y3 x4 y4` (normalized coordinates, clockwise/ccw consistent per dataset convention)
-  - Example:
-    - `.../Labels/Uveitis/Uveitis-014.txt`
-    - `2 0.367187 0.580766 0.552951 0.545502 0.583333 0.640276 0.368056 0.706397`
-
----
-
-## 2) IDRiD (Indian Diabetic Retinopathy Image Dataset)
-
-- **Origin**: IDRiD Challenge (Indian Institute of Technology / collaborators); distributed via Zenodo.
-- **Purpose in our pipeline**
-  - **Pixel-level lesion supervision** (HE/EX/SE/MA + OD) to build strong **lesion-aware representations** and a “lesion decoder” that can later be adapted to uveitis symptoms.
-  - Optional: disease grading/localization splits for auxiliary tasks.
-- **Size (commonly reported)**
-  - Segmentation subset: **81 train + 81 test** (162 images)
-  - Grading subset: **516** images total (train/test split provided)
-- **Direct download links (Zenodo files)**
-  - Segmentation: `https://zenodo.org/records/17219542/files/A.%20Segmentation.zip?download=1`
-  - Disease grading: `https://zenodo.org/records/17219542/files/B.%20Disease%20Grading.zip?download=1`
-  - Localization: `https://zenodo.org/records/17219542/files/C.%20Localization.zip?download=1`
-  - Record page: `https://zenodo.org/records/17219542`
-- **Typical structure (after unzip)**
-  - `A. Segmentation/`
-    - `1. Original Images/` (train/test splits)
-    - `2. All Segmentation Groundtruths/` (per-lesion masks; usually one mask file per image per lesion)
-  - `B. Disease Grading/` (images + CSV/XLS labels)
-  - `C. Localization/` (images + lesion/structure localization labels, depending on split)
-
----
-
-## 3) FGADR (Fine-Grained Annotated Diabetic Retinopathy)
-
-- **Origin**: Inception Institute of Artificial Intelligence (IIAI) + collaborators; academic/non-commercial.
-- **Purpose in our pipeline**
-  - Strong **pixel-level lesion supervision** for: **hemorrhages (HE)**, **hard exudates (EX)**, **soft exudates (SE / cotton-wool)**, **MA**, **IRMA**, **NV**.
-  - Also provides **image-level** labels for **laser marks** and **proliferative membrane** (useful proxies for your `laser_retinien` / `membrane_epiretinenne` symptoms).
-- **Size**
-  - **Seg-set: 1,842 images** (released)
-  - **Grade-set: 1,000 images** (not always released; see access notes)
-- **Direct download link**
-  - **Download URL**: `https://drive.usercontent.google.com/download?id=1auSQI3O5qd-hHB4U5gXOdDwa02Bj3yHS&export=download&authuser=0`
-  - (Original Access): Research use agreement was required at `https://csyizhou.github.io/FGADR/`, but the above link appears to be directly accessible.
-- **Structure**
-  - The delivered archive typically contains:
-    - image folder(s) (one image file per sample)
-    - lesion masks (one or multiple mask files per sample; format depends on release)
-    - metadata / grading labels (CSV or similar)
-  - **Action item**: once you receive the package, lock the exact tree in `data_specs/fgadr_tree.txt` for reproducibility.
-
----
-
-## 4) DeepDRiD (Deep Diabetic Retinopathy Image Dataset)
-
-- **Origin**: DeepDRiD Challenge organizers; released on GitHub (CC-BY-SA-4.0).
-- **Purpose in our pipeline**
-  - **UWF + standard CFP** training data for DR grading + quality; crucial for **domain adaptation to UWF geometry** before uveitis fine-tuning.
-  - Provides an “in-between” step: *lesion-aware* (from IDRiD/FGADR) → *DR grading on UWF* (DeepDRiD) → *uveitis OBB localization*.
-- **Size**
-  - Multiple splits across regular fundus + ultra-widefield; exact counts depend on the split folders shipped in the release (training/validation/evaluation).
-- **Direct download links**
-  - Repository: `https://github.com/deepdrdoc/DeepDRiD`
-  - “Final version” tagged archive (zip): `https://github.com/deepdrdoc/DeepDRiD/archive/refs/tags/v1.1.zip`
-- **Structure (from the official README)**
-  - `regular_fundus_images/`
-    - `regular-fundus-training/Images/`, `regular-fundus-training.csv`
-    - `regular-fundus-validation/Images/`, `regular-fundus-validation.csv`
-    - `Online-Challenge1&2-Evaluation/Images/` + upload/label files (varies)
-  - `ultra-widefield_images/`
-    - `ultra-widefield-training/Images/`, `ultra-widefield-training.csv`
-    - `ultra-widefield-validation/Images/`, `ultra-widefield-validation.csv`
-    - `Online-Challenge3-Evaluation/Images/` + upload/label files (varies)
-
----
-
-## 5) OUWF / “Open ultra-widefield fundus image dataset with disease diagnosis & image quality”
-
-- **Origin**: Scientific Data (2024) + Figshare deposition.
-- **Purpose in our pipeline**
-  - **UWF domain exposure** (image statistics, peripheral distortions, artifacts).
-  - Auxiliary supervision: disease diagnosis + image quality assessment can help the encoder learn robust UWF features.
-- **Size**: **700 UWF images**
-- **Direct download link**
-  - DOI landing page: `https://doi.org/10.6084/m9.figshare.26936446`
-- **Structure (as described by the authors)**
-  - **7 folders**: `Normal` + 6 disease categories (each **100 images**)
-  - Labels typically provided via spreadsheet/metadata files (diagnosis + image-quality fields)
-
-
-
----
-
-## 7) EyePACS (Kaggle “Diabetic Retinopathy Detection”)
-
-- **Origin**: Kaggle competition / EyePACS.
-- **Purpose in our pipeline**
-  - Large-scale **DR grading classification** to strengthen the encoder and provide a strong “retinal disease” prior.
-- **Size** (competition distribution)
-  - Train: **35,126** images with labels
-  - Test: ~**53k** unlabeled images (for competition inference)
-- **Direct download link**
-  - Kaggle dataset page: `https://www.kaggle.com/c/diabetic-retinopathy-detection/data`
-- **Structure (Kaggle download)**
-  - `train/` (images)
-  - `test/` (images)
-  - `trainLabels.csv` (image id → DR grade)
-  - `sampleSubmission.csv`
-
----
-
-## 8) APTOS 2019 (Kaggle “Blindness Detection”)
-  - `ODIR-5K/Images/` (left/right eye image files)
-  - `full_df.csv` / `data.xlsx` (per-patient metadata + multi-label targets)
-
----
-
-## 11) e-ophtha (MA / EX) — optional but useful for lesion masks
-
-- **Origin**: ADCIS (academic, non-commercial; requires form).
-- **Purpose in our pipeline**
-  - Extra pixel-level supervision for **exudates** and **microaneurysms** (helps the lesion decoder generalize).
-- **Size (commonly reported)**
-  - e-ophtha-EX: **47** images with exudates + **35** without (82 total)
-  - e-ophtha-MA: commonly reported as **~381** total (exact split varies by release notes)
-- **Direct download link**
-  - Official access page (download form): `https://www.adcis.net/en/third-party/e-ophtha/`
-- **Structure**
-  - Two sub-datasets: `e-ophtha-EX/` and `e-ophtha-MA/`
-  - Images + expert annotations (often delivered as lesion mask(s) / overlays; exact format depends on the download package)
-
----
-
-## Practical ingestion conventions (recommended)
-
-To keep training scripts uniform across all sources, normalize everything to this internal layout:
-
-- `data/<dataset_name>/images/<split>/*.jpg`
-- `data/<dataset_name>/labels/`
-  - segmentation: `masks/<split>/<class_name>/*.png` (binary masks) or `masks/<split>/*.tif` (multi-class)
-  - classification: `labels_<split>.csv`
-  - detection/obb: `labels_obb/<split>/*.txt` (YOLO-OBB style) + `classes.txt`
-
-And keep an immutable copy of the original tree in:
-
-- `data/<dataset_name>/ORIGINAL_TREE.txt`
-
+## Your Uveitis UWF OBB dataset (internal)
+**Used for:** Stage 1 (as unlabeled images in MAE continuation) and Stage 6 (final Oriented R-CNN fine-tuning + evaluation).  
+**Why it matters:** This is the target distribution; it calibrates symptom classes and reduces residual domain mismatch.  
+**Get it:** internal / private dataset (no public link).  
+- Script: `python download_uveitis_internal.py` (prints where to place data under `datasets/raw/Uveitis-DISP/`).  
