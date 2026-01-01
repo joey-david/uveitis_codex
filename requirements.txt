@@ -2,6 +2,7 @@
 requests
 tqdm
 kaggle
+gdown
 pandas
 numpy
 

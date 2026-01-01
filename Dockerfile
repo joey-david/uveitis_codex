@@ -14,15 +14,8 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Install Python dependencies
-RUN pip install --no-cache-dir \
-    opencv-python-headless \
-    pandas \
-    numpy \
-    requests \
-    tqdm \
-    kaggle \
-    pyyaml \
-    beautifulsoup4
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Copy source code
 COPY . /app
