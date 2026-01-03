@@ -18,18 +18,6 @@
 
 ---
 
-## Stage 0 — Unify geometry and data loading
-
-1. Convert your `cls xyxyxyxy` polygons → rotated boxes `(cx, cy, w, h, θ)` (pixels) using `minAreaRect`, store as **le90**.
-2. Implement tiling:
-   * train on overlapping tiles
-   * inference on tiles + merge (rotated NMS / WBF variant)
-3. Fix patient-level split and evaluation protocol.
-
-**Metric:** **100% label validity** (0 parsing errors) & Visual verification of ~20 random samples.
-
----
-
 ## Stage 1 — Make RETFound “UWF-native” (self-supervised)
 
 **Initialize encoder:** RETFound ViT weights.
