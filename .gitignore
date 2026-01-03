@@ -7,6 +7,14 @@ datasets/**/*.tif
 datasets/ND_UWFI_dataset/base_dataset/
 datasets/ND_UWFI_dataset/extended_dataset/
 datasets/raw/
+datasets/deepdrid/
+datasets/eyepacs/
+datasets/seg-set/
+datasets/uwf-700/
+!datasets/uwf-700/Labels/
+!datasets/uwf-700/Labels/**
+!datasets/uwf-700/variables.csv
+!datasets/uwf-700/visualize_uveitis_boxes.py
 
 
 # 1) Ignore everything under datasets
