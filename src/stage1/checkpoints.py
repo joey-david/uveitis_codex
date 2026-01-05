@@ -30,7 +30,10 @@ def enable_hf_transfer():
 
 
 def load_checkpoint(path):
-    ckpt = torch.load(path, map_location="cpu")
+    try:
+        ckpt = torch.load(path, map_location="cpu", weights_only=False)
+    except TypeError:
+        ckpt = torch.load(path, map_location="cpu")
     if isinstance(ckpt, dict):
         if "model" in ckpt:
             return ckpt["model"]
@@ -50,7 +53,6 @@ def download_retfound_checkpoint(repo_id, cache_dir=None):
                 repo_id=repo_id,
                 filename=filename,
                 cache_dir=cache_dir,
-                resume_download=True,
             )
         )
     except Exception:
