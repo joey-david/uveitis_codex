@@ -77,7 +77,7 @@ def main():
         sampler=sampler,
         shuffle=(sampler is None),
         num_workers=args.num_workers,
-        pin_memory=True,
+        pin_memory=(device.type == "cuda"),
         drop_last=True,
     )
     model = mae_vit_large_patch16()
@@ -91,7 +91,12 @@ def main():
         model = DDP(model, device_ids=[local_rank] if device.type == "cuda" else None)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     use_amp = args.amp and device.type == "cuda"
-    scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
+    if hasattr(torch, "amp"):
+        scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
+        autocast = torch.amp.autocast
+    else:
+        scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
+        autocast = torch.cuda.amp.autocast
     for epoch in range(args.epochs):
         if distributed:
             sampler.set_epoch(epoch)
@@ -100,7 +105,7 @@ def main():
         start = time.time()
         for images in loader:
             images = images.to(device, non_blocking=True)
-            with torch.cuda.amp.autocast(enabled=use_amp):
+            with autocast("cuda", enabled=use_amp):
                 loss, _, _ = model(images, mask_ratio=args.mask_ratio)
             optimizer.zero_grad(set_to_none=True)
             scaler.scale(loss).backward()
