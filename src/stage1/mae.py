@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from timm.models.layers import trunc_normal_
+from timm.layers import trunc_normal_
 from timm.models.vision_transformer import Block, PatchEmbed
 
 

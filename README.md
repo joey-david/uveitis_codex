@@ -2,41 +2,14 @@
 
 A machine learning project for localization of uveitis symptoms on ultra-wide-field fundus images.
 
-## Environment Setup
-
-This project uses Docker for reproducibility.
-
-```bash
-docker-compose build
-docker-compose up -d
-docker-compose exec dataset-prep bash
-```
-
 ## Datasets
 
-We use a collection of public retinal datasets for pretraining and domain adaptation.
+Expected paths:
+- UWF-700: `datasets/uwf-700/Images/`
+- DeepDRiD UWF: `datasets/deepdrid/ultra-widefield_images/ultra-widefield-training/Images/` and `datasets/deepdrid/ultra-widefield_images/ultra-widefield-validation/Images/`
 
-### Structure
-- **Raw Data**: `datasets/raw/` (Download destination)
-- **Processed**: `datasets/processed/` (Standardized format: `images/train/*.jpg`, `labels/...`)
-
-### Workflow
-
-1.  **Download**: Use the download script to fetch data.
-    ```bash
-    # Check status and instructions (Dry Run)
-    python datasets/download_datasets.py --dry-run
-    
-    # Download everything (Direct + Kaggle)
-    python datasets/download_datasets.py
-    ```
-    *Note: Kaggle datasets require `kaggle.json` in root/`~/.kaggle`. Some datasets (FGADR) require manual download to `datasets/raw`.*
-
-2.  **Standardize**: Convert all raw data into the unified project structure.
-    ```bash
-    python datasets/standardize_datasets.py
-    ```
-    *Supported: UWF-700, DeepDRiD, FGADR, EyePACS, Uveitis-DISP (manual).*
+Download/standardize helpers: `datasets/download_datasets.py`, `datasets/standardize_datasets.py`  
+Details and dataset-specific notes: `datasets/datasets.md`
 
 ## Stage 1: RETFound MAE Adaptation (UWF)
 
@@ -46,10 +19,11 @@ Prereqs:
 
 Run these 3 commands in order:
 
-1) Login for gated RETFound weights (checkpoint will download into `~/.cache/huggingface/` on first use).
+1) Authenticate for gated RETFound weights (checkpoint will download into `~/.cache/huggingface/` on first use).
 ```bash
-huggingface-cli login
+hf auth login
 ```
+For faster downloads, `hf_transfer` is included; the scripts enable it automatically when available.
 
 2) Build the unlabeled manifest and run Stage-1 MAE adaptation (outputs `manifests/stage1_unlabeled.jsonl` and `runs/stage1/mae_adapt_last.pth`, `runs/stage1/encoder_adapted.pth`).
 ```bash
@@ -84,9 +58,12 @@ Build the image (once):
 docker build -t uveitis-codex:latest .
 ```
 
-Run an interactive container with GPU access (outputs and checkpoints stay in your working tree):
+Run an interactive container with GPU access and persistent Hugging Face cache:
 ```bash
-docker run --rm -it --gpus all -v "$PWD:/workspace" -w /workspace uveitis-codex:latest bash
+docker run --rm -it --gpus all \
+  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  -v "$PWD:/workspace" -w /workspace \
+  uveitis-codex:latest bash
 ```
 
-Inside the container, run the same 3 commands above. HuggingFace caches to `/root/.cache/huggingface/`, manifests go to `manifests/`, and checkpoints/results to `runs/`.
+Inside the container, run the same 3 commands above. Manifests go to `manifests/`, and checkpoints/results to `runs/`.

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import torch
@@ -19,6 +20,15 @@ def sanitize_state_dict(state):
     return cleaned
 
 
+def enable_hf_transfer():
+    try:
+        import hf_transfer  # noqa: F401
+    except Exception:
+        return False
+    os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")
+    return True
+
+
 def load_checkpoint(path):
     ckpt = torch.load(path, map_location="cpu")
     if isinstance(ckpt, dict):
@@ -30,17 +40,29 @@ def load_checkpoint(path):
 
 
 def download_retfound_checkpoint(repo_id, cache_dir=None):
-    from huggingface_hub import snapshot_download
+    from huggingface_hub import hf_hub_download, snapshot_download
 
-    local_dir = snapshot_download(
-        repo_id=repo_id,
-        allow_patterns=["*.pth", "*.pt"],
-        cache_dir=cache_dir,
-    )
-    candidates = list(Path(local_dir).glob("*.pth")) + list(Path(local_dir).glob("*.pt"))
-    if not candidates:
-        raise FileNotFoundError(f"No checkpoint found in {local_dir}")
-    return max(candidates, key=lambda p: p.stat().st_size)
+    enable_hf_transfer()
+    filename = f"{repo_id.split('/')[-1]}.pth"
+    try:
+        return Path(
+            hf_hub_download(
+                repo_id=repo_id,
+                filename=filename,
+                cache_dir=cache_dir,
+                resume_download=True,
+            )
+        )
+    except Exception:
+        local_dir = snapshot_download(
+            repo_id=repo_id,
+            allow_patterns=["*.pth", "*.pt"],
+            cache_dir=cache_dir,
+        )
+        candidates = list(Path(local_dir).glob("*.pth")) + list(Path(local_dir).glob("*.pt"))
+        if not candidates:
+            raise FileNotFoundError(f"No checkpoint found in {local_dir}")
+        return max(candidates, key=lambda p: p.stat().st_size)
 
 
 def resolve_checkpoint(path_or_repo, cache_dir=None):
