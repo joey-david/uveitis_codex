@@ -12,15 +12,4 @@ torchvision
 opencv-python
 scikit-learn
 timm
-huggingface_hub
-hf_transfer
 pytest
-
-# MMRotate Stack (Install order matters generally, use mimicking for pip)
-# These often require matching CUDA versions.
-# Suggest installing via mim if possible, but listing here for reference.
-openmim
-mmengine
-mmcv
-mmdet
-mmrotate

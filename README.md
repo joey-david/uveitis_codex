@@ -2,68 +2,88 @@
 
 A machine learning project for localization of uveitis symptoms on ultra-wide-field fundus images.
 
+This repo now implements the MVCAViT multi-view framework (CNN + ViT + cross-attention + PSO) for
+classification + lesion localization, aligned to the Scientific Reports paper referenced in
+`../nature_vit_cnn_dr_localization.pdf`.
+
 ## Datasets
 
-Expected paths:
+Downloaders and organizers live in `datasets/` and are unchanged. See `datasets/datasets.md` for dataset notes.
+
+Typical image roots:
 - UWF-700: `datasets/uwf-700/Images/`
-- DeepDRiD UWF: `datasets/deepdrid/ultra-widefield_images/ultra-widefield-training/Images/` and `datasets/deepdrid/ultra-widefield_images/ultra-widefield-validation/Images/`
+- DeepDRiD UWF: `datasets/deepdrid/ultra-widefield_images/ultra-widefield-training/Images/` and
+  `datasets/deepdrid/ultra-widefield_images/ultra-widefield-validation/Images/`
 
-Download/standardize helpers: `datasets/download_datasets.py`, `datasets/standardize_datasets.py`  
-Details and dataset-specific notes: `datasets/datasets.md`
+## Local setup (CPU only)
 
-## Stage 1: RETFound MAE Adaptation (UWF)
-
-Prereqs:
-- UWF-700 images: `datasets/uwf-700/Images/`
-- DeepDRiD UWF images: `datasets/deepdrid/ultra-widefield_images/ultra-widefield-training/Images/` and `datasets/deepdrid/ultra-widefield_images/ultra-widefield-validation/Images/`
-
-Run these 3 commands in order:
-
-1) Authenticate for gated RETFound weights (checkpoint will download into `~/.cache/huggingface/` on first use).
 ```bash
-hf auth login
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
-For faster downloads, `hf_transfer` is included; the scripts enable it automatically when available.
-
-2) Build the unlabeled manifest and run Stage-1 MAE adaptation (outputs `manifests/stage1_unlabeled.jsonl` and `runs/stage1/mae_adapt_last.pth`, `runs/stage1/encoder_adapted.pth`).
+Quick check:
 ```bash
-python scripts/build_manifest.py unlabeled \
-  --roots datasets/uwf-700/Images \
-          datasets/deepdrid/ultra-widefield_images/ultra-widefield-training/Images \
-          datasets/deepdrid/ultra-widefield_images/ultra-widefield-validation/Images \
-  --output manifests/stage1_unlabeled.jsonl \
-  && python scripts/stage1_adapt_mae.py \
-    --manifest manifests/stage1_unlabeled.jsonl \
-    --output-dir runs/stage1
+pytest -q
 ```
 
-DDP example (optional, multi-GPU):  
-`torchrun --nproc_per_node=4 scripts/stage1_adapt_mae.py --manifest manifests/stage1_unlabeled.jsonl --output-dir runs/stage1`
+## MVCAViT workflow (modular steps)
 
-3) Build UWF-700 splits and run the before/after linear probe (outputs `manifests/uwf700/*.jsonl`, `manifests/uwf700/labels.json`, `runs/linear_probe/results.json`).
+### 1) Build a multi-view manifest
+
+Pair macula/optic images by filename suffix:
 ```bash
-python scripts/build_manifest.py uwf700 --images-dir datasets/uwf-700/Images --out-dir manifests/uwf700 \
-  && python scripts/eval_linear_probe.py \
-    --train manifests/uwf700/train.jsonl \
-    --val manifests/uwf700/val.jsonl \
-    --test manifests/uwf700/test.jsonl \
-    --adapted runs/stage1/encoder_adapted.pth \
-    --output runs/linear_probe/results.json
+python scripts/build_multiview_manifest.py pairs \
+  --root datasets/drtid/images \
+  --macula-suffix _M --optic-suffix _O \
+  --output manifests/drtid_train.jsonl
 ```
+Output: `manifests/drtid_train.jsonl` (JSONL with `macula_path`, `optic_path`, `label`).
+
+Or build from a CSV with columns `macula_path`, `optic_path`, `label`, `boxes` (JSON list of `[x1,y1,x2,y2]`):
+```bash
+python scripts/build_multiview_manifest.py csv \
+  --csv manifests/drtid_train.csv \
+  --output manifests/drtid_train.jsonl
+```
+
+### 2) Validate the manifest
+```bash
+python scripts/validate_manifest.py --manifest manifests/drtid_train.jsonl
+```
+Output: JSON with record count and any missing files or invalid boxes.
+
+### 3) Train MVCAViT
+```bash
+python scripts/train_mvcavit.py \
+  --train-manifest manifests/drtid_train.jsonl \
+  --val-manifest manifests/drtid_val.jsonl \
+  --output-dir runs/mvcavit \
+  --num-classes 5 --num-boxes 10 \
+  --use-pso
+```
+Outputs:
+- `runs/mvcavit/last.pt` (latest checkpoint)
+- `runs/mvcavit/best.pt` (best validation loss)
+- `runs/mvcavit/metrics.json` (per-epoch losses)
+
+### 4) Evaluate
+```bash
+python scripts/eval_mvcavit.py \
+  --manifest manifests/drtid_val.jsonl \
+  --checkpoint runs/mvcavit/best.pt
+```
+Output: JSON with accuracy and mean IoU.
+
+### Uveitis single-view note
+If you only have one view per image, use the same image for both views:
+- Build a manifest with only `macula_path` and pass `--mirror-view` to training/eval.
+If your labels are oriented boxes, pass `--box-format obb` to convert them to axis-aligned boxes.
+
+For transfer learning from DR:
+- Train on DR data first.
+- Re-run `scripts/train_mvcavit.py` with `--pretrained runs/mvcavit/best.pt` on your uveitis manifest.
 
 ## Docker (GPU training)
 
-Build the image (once):
-```bash
-docker build -t uveitis-codex:latest .
-```
-
-Run an interactive container with GPU access and persistent Hugging Face cache:
-```bash
-docker run --rm -it --gpus all \
-  -v ~/.cache/huggingface:/root/.cache/huggingface \
-  -v "$PWD:/workspace" -w /workspace \
-  uveitis-codex:latest bash
-```
-
-Inside the container, run the same 3 commands above. Manifests go to `manifests/`, and checkpoints/results to `runs/`.
+See `docker.md` for a detailed, step-by-step guide with expected outputs.
