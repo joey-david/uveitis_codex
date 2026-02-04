@@ -9,7 +9,7 @@ datasets/ND_UWFI_dataset/extended_dataset/
 datasets/raw/
 datasets/deepdrid/
 datasets/eyepacs/
-datasets/seg-set/
+datasets/fgadr/
 datasets/uwf-700/
 !datasets/uwf-700/Labels/
 !datasets/uwf-700/Labels/**

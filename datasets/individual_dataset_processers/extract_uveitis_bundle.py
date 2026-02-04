@@ -7,7 +7,7 @@ from pathlib import Path
 INNER_ZIPS = {
     "deepdrid": "DeepDRiD.zip",
     "eyepacs": "eyepacs_1024.zip",
-    "seg-set": "FGADR-Seg-set_Release.zip",
+    "fgadr": "FGADR-Seg-set_Release.zip",
     "uwf": "UWF.zip",
 }
 
@@ -58,8 +58,8 @@ def process_eyepacs(zip_path: Path, out_dir: Path, force: bool) -> None:
     shutil.rmtree(tmp_dir)
 
 
-def process_seg_set(zip_path: Path, out_dir: Path, force: bool) -> None:
-    tmp_dir = zip_path.parent / "seg_set_extract"
+def process_fgadr(zip_path: Path, out_dir: Path, force: bool) -> None:
+    tmp_dir = zip_path.parent / "fgadr_extract"
     extract_zip(zip_path, tmp_dir)
     seg_dir = tmp_dir / "Seg-set"
 
@@ -160,9 +160,9 @@ def main() -> None:
     (work_dir / INNER_ZIPS["eyepacs"]).unlink()
     print("EyePACS extracted.")
 
-    process_seg_set(work_dir / INNER_ZIPS["seg-set"], out_root / "seg-set", args.force)
-    (work_dir / INNER_ZIPS["seg-set"]).unlink()
-    print("Seg-set extracted.")
+    process_fgadr(work_dir / INNER_ZIPS["fgadr"], out_root / "fgadr", args.force)
+    (work_dir / INNER_ZIPS["fgadr"]).unlink()
+    print("fgadr extracted.")
 
     process_uwf(
         work_dir / INNER_ZIPS["uwf"],
