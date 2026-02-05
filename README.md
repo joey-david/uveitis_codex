@@ -42,11 +42,17 @@ Pipeline for UWF uveitis lesion localization/classification with a RetFound-adap
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+Optional (SAM v1 fallback checkpoint):
+```bash
 mkdir -p models/sam
 wget -O models/sam/sam_vit_h_4b8939.pth https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
 ```
 
-SAM-based UWF masking test:
+SAM2 is the recommended UWF ROI path; see `docker.md` / docs for the expected checkpoint path under `models/sam2/`.
+
+SAM2-based UWF masking test (interactive):
 ```bash
 python datasets/uwf-700/visualize_fundus_masks.py \
   --images datasets/uwf-700/Images/Uveitis \
@@ -73,6 +79,15 @@ Output files:
 - `splits/stage0_0.json`
 
 ### 1. Run preprocessing (ROI/crop/normalize/tile)
+
+If using reference-based normalization (`normalize.method: reinhard_lab_ref`), build the regular-fundus reference first:
+
+```bash
+python scripts/build_regular_fundus_color_ref.py \
+  --config configs/stage0_preprocess.yaml \
+  --per-dataset 50 \
+  --out preproc/ref/regular_fundus_color_stats.json
+```
 
 ```bash
 python scripts/stage0_preprocess.py --config configs/stage0_preprocess.yaml

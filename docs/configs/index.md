@@ -7,6 +7,7 @@ This section documents each YAML config in `configs/`.
 Files:
 - `configs/stage0_manifest.yaml`
 - `configs/stage0_manifest_smoke.yaml`
+- `configs/stage0_manifest_fast.yaml` (same datasets as full, but `read_image_size: false` for faster scanning)
 
 Consumed by:
 - [`scripts/stage0_build_manifest.py`](../scripts/stage0_build_manifest.md)
@@ -46,8 +47,17 @@ Key schema:
 - `roi.sam.points_norm`: list of normalized prompt triplets `[x_norm, y_norm, label]`.
 - `roi.sam.open_kernel|close_kernel`: post-mask morphology kernel sizes.
 - `roi.sam.min_area_ratio|max_area_ratio|max_border_touch_ratio`: mask quality constraints for selecting SAM output.
-- `normalize.method`: one of `zscore_rgb`, `grayworld`, `clahe_luminance`.
+- `roi.sam2.checkpoint`: SAM2 checkpoint path.
+- `roi.sam2.model_cfg`: SAM2 model config path (from the SAM2 package).
+- `roi.sam2.device`: inference device (`cuda` or `cpu`).
+- `roi.sam2.fallback_to_threshold`: bool; use threshold mask if SAM2 is unavailable.
+- `roi.sam2.multimask_output`: bool.
+- `roi.sam2.points_norm`: list of normalized prompt triplets `[x_norm, y_norm, label]`.
+- `roi.sam2.open_kernel|close_kernel`: post-mask morphology kernel sizes.
+- `roi.sam2.min_area_ratio|max_area_ratio|max_border_touch_ratio`: mask quality constraints for selecting SAM2 output.
+- `normalize.method`: one of `zscore_rgb`, `grayworld`, `clahe_luminance`, `reinhard_lab_ref`.
 - `normalize.stats_erode_px`: int erosion radius for stats mask (reduces border contamination in normalization stats).
+- `normalize.ref.stats_path`: required when using `reinhard_lab_ref`; JSON with `lab_mean` and `lab_std` computed from regular fundus images.
 - `resize.global_size`: int.
 - `tiling.tile_size`: int.
 - `tiling.overlap`: float in `[0,1)`.

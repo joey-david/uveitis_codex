@@ -179,6 +179,9 @@ Command:
 
 Takes in:
 - cropped image + ROI/stat masks
+- optional regular-fundus reference stats if using `normalize.method: reinhard_lab_ref`:
+  - build with `python scripts/build_regular_fundus_color_ref.py --per-dataset 50`
+  - writes `preproc/ref/regular_fundus_color_stats.json` (path set by `normalize.ref.stats_path`)
 
 Produces:
 - `preproc/norm/{image_id}.png`

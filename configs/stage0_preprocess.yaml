@@ -63,8 +63,10 @@ roi:
     max_border_touch_ratio: 0.55
 
 normalize:
-  method: zscore_rgb
+  method: reinhard_lab_ref
   stats_erode_px: 4
+  ref:
+    stats_path: preproc/ref/regular_fundus_color_stats.json
 
 resize:
   global_size: 1024

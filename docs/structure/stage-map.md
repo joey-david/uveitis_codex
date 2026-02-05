@@ -19,6 +19,9 @@ For command-by-command Docker execution details (including substage inputs/outpu
 - Script: [`scripts/stage0_preprocess.py`](../scripts/stage0_preprocess.md)
 - Config: [`configs/stage0_preprocess.yaml`](../configs/index.md#stage0-preprocess)
 - Input: manifests from Stage 0.0
+- Note: if using reference-based normalization (`normalize.method: reinhard_lab_ref`), generate the reference first:
+  - script: [`scripts/build_regular_fundus_color_ref.py`](../scripts/build_regular_fundus_color_ref.md)
+  - output: `preproc/ref/regular_fundus_color_stats.json`
 - Output:
   - `preproc/roi_masks`, `preproc/crops`, `preproc/norm`, `preproc/global_1024`, `preproc/tiles`
   - `preproc/crop_meta`, `preproc/norm_meta`, `preproc/tiles_meta`

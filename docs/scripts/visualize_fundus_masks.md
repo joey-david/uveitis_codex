@@ -1,7 +1,7 @@
 # `datasets/uwf-700/visualize_fundus_masks.py`
 
 ## Purpose
-Interactive QA viewer for UWF fundus masks (prompted SAM for `uwf700`, threshold fallback if unavailable).
+Interactive QA viewer for UWF fundus masks (prompted SAM2/SAM for `uwf700`, threshold fallback if unavailable).
 
 ## CLI
 ```bash
@@ -22,8 +22,8 @@ python datasets/uwf-700/visualize_fundus_masks.py \
 
 ## Reads
 - UWF image directory
-- `roi` + `roi.sam` config in `configs/stage0_preprocess.yaml`
+- `roi` + `roi.sam2`/`roi.sam` config in `configs/stage0_preprocess.yaml`
 
 ## Notes
 - Uses the same `compute_roi_mask(...)` path as stage preprocessing.
-- Prints fallback notice if SAM checkpoint/import is unavailable.
+- Prints fallback notice if SAM2/SAM checkpoint/import is unavailable.

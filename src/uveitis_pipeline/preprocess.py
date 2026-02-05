@@ -341,8 +341,11 @@ def normalize_color(
     stats_mask: np.ndarray,
     method: str,
     out_mask: np.ndarray | None = None,
+    ref: dict | None = None,
 ) -> tuple[np.ndarray, dict]:
     stats = stats_mask > 0
+    # Exclude pure black pixels from stat estimation (regular fundus borders, masked-out regions).
+    stats &= (image.astype(np.int32).sum(axis=2) > 0)
     out_apply = (out_mask > 0) if out_mask is not None else stats
 
     out = image.astype(np.float32).copy()
@@ -379,6 +382,22 @@ def normalize_color(
             sub[sub_mask] = tmp[sub_mask]
             lab[y0:y1, x0:x1, 0] = sub
         out = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB).astype(np.float32)
+    elif method == "reinhard_lab_ref":
+        if not ref or "lab_mean" not in ref or "lab_std" not in ref:
+            raise ValueError("reinhard_lab_ref requires ref={'lab_mean': [...], 'lab_std': [...]} loaded from stats file")
+        tgt_mean = np.array(ref["lab_mean"], dtype=np.float32).reshape(1, 1, 3)
+        tgt_std = np.array(ref["lab_std"], dtype=np.float32).reshape(1, 1, 3)
+
+        lab = cv2.cvtColor(out.astype(np.uint8), cv2.COLOR_RGB2LAB).astype(np.float32)
+        lab_roi = lab[stats]
+        src_mean = lab_roi.mean(axis=0).astype(np.float32)
+        src_std = (lab_roi.std(axis=0) + 1e-6).astype(np.float32)
+        src_std = np.maximum(src_std, 1.0)
+
+        lab = (lab - src_mean.reshape(1, 1, 3)) / src_std.reshape(1, 1, 3)
+        lab = lab * tgt_std + tgt_mean
+        lab = np.clip(lab, 0, 255).astype(np.uint8)
+        out = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB).astype(np.float32)
     else:
         raise ValueError(f"Unknown normalization method: {method}")
 
@@ -389,6 +408,9 @@ def normalize_color(
         "mean": [float(x) for x in mean],
         "std": [float(x) for x in std],
     }
+    if method == "reinhard_lab_ref":
+        meta["ref_lab_mean"] = [float(x) for x in ref["lab_mean"]]
+        meta["ref_lab_std"] = [float(x) for x in ref["lab_std"]]
     return out, meta
 
 
@@ -499,6 +521,21 @@ def process_manifest(manifest_rows: list[dict], cfg: dict, out_root: Path) -> di
             if not bool(sam2_cfg.get("fallback_to_threshold", True)):
                 raise
 
+    ref_stats = None
+    norm_cfg = cfg.get("normalize", {})
+    norm_method = str(norm_cfg.get("method", "zscore_rgb"))
+    if norm_method == "reinhard_lab_ref":
+        ref_path = Path(norm_cfg.get("ref", {}).get("stats_path", ""))
+        if not ref_path:
+            raise ValueError("normalize.ref.stats_path is required for normalize.method=reinhard_lab_ref")
+        if not ref_path.exists():
+            raise FileNotFoundError(
+                f"Missing color reference stats: {ref_path}. Run scripts/build_regular_fundus_color_ref.py first."
+            )
+        import json
+
+        ref_stats = json.loads(ref_path.read_text(encoding="utf-8"))
+
     fail_small = 0
     fail_border = 0
 
@@ -526,7 +563,7 @@ def process_manifest(manifest_rows: list[dict], cfg: dict, out_root: Path) -> di
         x0, y0, x1, y1 = crop_meta["bbox_xyxy"]
         roi_crop = mask[y0:y1, x0:x1]
         stats_mask = _safe_erode(roi_crop, int(cfg["normalize"].get("stats_erode_px", 4)))
-        norm, norm_meta = normalize_color(crop, stats_mask, cfg["normalize"]["method"], out_mask=roi_crop)
+        norm, norm_meta = normalize_color(crop, stats_mask, norm_method, out_mask=roi_crop, ref=ref_stats)
         write_image(norm_dir / f"{image_id}.png", norm)
         save_json(norm_meta_dir / f"{image_id}.json", norm_meta)
 

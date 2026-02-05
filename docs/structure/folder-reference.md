@@ -26,6 +26,7 @@ This page documents the main folders used by the implemented pipeline.
 | `preproc/crop_meta/` | Crop metadata (`bbox_xyxy`, sizes). | `scripts/stage0_preprocess.py` |
 | `preproc/norm/` | Color-normalized crop images. | `scripts/stage0_preprocess.py` |
 | `preproc/norm_meta/` | Normalization stats per image (mean/std/method). | `scripts/stage0_preprocess.py` |
+| `preproc/ref/` | Reference stats used by reference-based normalization (e.g. regular fundus LAB mean/std). | `scripts/build_regular_fundus_color_ref.py` |
 | `preproc/global_1024/` | Square global resized images for detector space. | `scripts/stage0_preprocess.py` |
 | `preproc/tiles/` | Tiled images per sample (`tile_000.png`, ...). | `scripts/stage0_preprocess.py` |
 | `preproc/tiles_meta/` | Tile geometry + global mapping metadata. | `scripts/stage0_preprocess.py` |
@@ -46,6 +47,8 @@ This page documents the main folders used by the implemented pipeline.
 | `preds/` | Inference JSON predictions per image. | `scripts/infer_detector.py` |
 | `preds_vis/` | Inference overlays for predicted boxes. | `scripts/infer_detector.py` |
 | `eval/` | Dataset/preproc/training/ablation reports. | `scripts/report_*.py`, `scripts/ablate_preproc.py` |
+| `eval/preproc_norm_qa_*` | Preprocessing QA bundles (mask, crop, norm, tiles) on small UWF samples. | `scripts/qa_preproc_norm_to_regular.py` |
+| `eval/sam2_mask_compare_*` | SAM2 masking strategy comparisons (visual strips + summaries). | `scripts/compare_sam2_masking.py` |
 | `pseudo_labels/` | Pseudo-expanded COCO datasets. | `scripts/stage4_pseudo_label_expand.py` |
 
 ## Documentation
