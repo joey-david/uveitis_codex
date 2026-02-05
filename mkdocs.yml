@@ -18,7 +18,6 @@ nav:
       - stage4_pseudo_label_expand.py: scripts/stage4_pseudo_label_expand.md
       - build_regular_fundus_color_ref.py: scripts/build_regular_fundus_color_ref.md
       - qa_preproc_norm_to_regular.py: scripts/qa_preproc_norm_to_regular.md
-      - compare_sam2_masking.py: scripts/compare_sam2_masking.md
       - report_dataset.py: scripts/report_dataset.md
       - report_preproc.py: scripts/report_preproc.md
       - report_training.py: scripts/report_training.md

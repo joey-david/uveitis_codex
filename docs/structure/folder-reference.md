@@ -48,7 +48,6 @@ This page documents the main folders used by the implemented pipeline.
 | `preds_vis/` | Inference overlays for predicted boxes. | `scripts/infer_detector.py` |
 | `eval/` | Dataset/preproc/training/ablation reports. | `scripts/report_*.py`, `scripts/ablate_preproc.py` |
 | `eval/preproc_norm_qa_*` | Preprocessing QA bundles (mask, crop, norm, tiles) on small UWF samples. | `scripts/qa_preproc_norm_to_regular.py` |
-| `eval/sam2_mask_compare_*` | SAM2 masking strategy comparisons (visual strips + summaries). | `scripts/compare_sam2_masking.py` |
 | `pseudo_labels/` | Pseudo-expanded COCO datasets. | `scripts/stage4_pseudo_label_expand.py` |
 
 ## Documentation
