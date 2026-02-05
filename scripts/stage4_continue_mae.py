@@ -20,9 +20,17 @@ def main() -> None:
 
     retfound_dir = Path(args.retfound_dir).resolve()
     if not retfound_dir.exists():
-        alt = (Path(__file__).resolve().parents[1] / ".." / "retfound").resolve()
-        if alt.exists():
-            retfound_dir = alt
+        repo = Path(__file__).resolve().parents[1]
+        for alt in [
+            (repo / "RETFound").resolve(),
+            (repo / "retfound").resolve(),
+            (repo / "third_party" / "RETFound").resolve(),
+            (repo / "third_party" / "retfound").resolve(),
+            (repo / "third_party" / "RETFound_MAE").resolve(),
+        ]:
+            if alt.exists():
+                retfound_dir = alt
+                break
     pretrain_script = retfound_dir / "main_pretrain.py"
 
     cmd = [

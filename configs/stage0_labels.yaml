@@ -20,3 +20,4 @@ build:
 output:
   labels_dir: labels_coco
   debug_dir: labels_debug
+  debug_max_images: 80

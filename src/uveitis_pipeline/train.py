@@ -137,6 +137,16 @@ def train_from_config(cfg: dict) -> dict:
         idx = list(range(min(overfit_n, len(train_ds))))
         train_ds = Subset(train_ds, idx)
         val_ds = Subset(val_ds, idx)
+    else:
+        max_train = int(cfg["training"].get("max_train_images", 0))
+        max_val = int(cfg["training"].get("max_val_images", 0))
+        seed = int(cfg.get("seed", 42))
+        if max_train > 0 and max_train < len(train_ds):
+            rs = np.random.RandomState(seed)
+            train_ds = Subset(train_ds, rs.choice(len(train_ds), size=max_train, replace=False).tolist())
+        if max_val > 0 and max_val < len(val_ds):
+            rs = np.random.RandomState(seed + 1)
+            val_ds = Subset(val_ds, rs.choice(len(val_ds), size=max_val, replace=False).tolist())
 
     sampler = None
     shuffle = True
@@ -170,6 +180,11 @@ def train_from_config(cfg: dict) -> dict:
         weight_decay=float(cfg["training"].get("weight_decay", 1e-4)),
     )
 
+    use_amp = bool(cfg["training"].get("amp", True)) and device.type == "cuda"
+    amp_dtype = str(cfg["training"].get("amp_dtype", "bf16")).lower()
+    autocast_dtype = torch.bfloat16 if amp_dtype in ("bf16", "bfloat16") else torch.float16
+    scaler = torch.cuda.amp.GradScaler(enabled=use_amp and autocast_dtype == torch.float16)
+
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer,
         T_max=max(1, int(cfg["training"]["epochs"])),
@@ -197,11 +212,17 @@ def train_from_config(cfg: dict) -> dict:
             images = [img.to(device) for img in images]
             targets = [{k: v.to(device) if hasattr(v, "to") else v for k, v in t.items()} for t in targets]
 
-            loss_dict = model(images, targets)
-            loss = sum(loss_dict.values())
             optimizer.zero_grad(set_to_none=True)
-            loss.backward()
-            optimizer.step()
+            with torch.autocast(device_type=device.type, dtype=autocast_dtype, enabled=use_amp):
+                loss_dict = model(images, targets)
+                loss = sum(loss_dict.values())
+            if scaler.is_enabled():
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                loss.backward()
+                optimizer.step()
             losses_epoch.append(float(loss.item()))
 
         scheduler.step()
@@ -234,12 +255,17 @@ def train_from_config(cfg: dict) -> dict:
         ckpt = {
             "epoch": epoch,
             "model": model.state_dict(),
-            "optimizer": optimizer.state_dict(),
             "config": cfg,
             "metrics": row,
             "val_metrics": val_metrics,
         }
-        torch.save(ckpt, ckpt_dir / f"epoch_{epoch:03d}.pth")
+        if bool(cfg["run"].get("save_optimizer", False)):
+            ckpt["optimizer"] = optimizer.state_dict()
+
+        save_epochs = int(cfg["run"].get("save_every_epochs", 0))
+        save_all = bool(cfg["run"].get("save_epoch_checkpoints", False))
+        if save_all or (save_epochs > 0 and (epoch % save_epochs == 0)):
+            torch.save(ckpt, ckpt_dir / f"epoch_{epoch:03d}.pth")
         torch.save(ckpt, ckpt_dir / "last.pth")
 
         if val_metrics["mAP_proxy"] > best_score:

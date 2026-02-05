@@ -30,6 +30,7 @@ def main() -> None:
     labels_dir = Path(cfg["output"]["labels_dir"])
     debug_dir = Path(cfg["output"]["debug_dir"])
     summary = {}
+    debug_max = int(cfg["output"].get("debug_max_images", 0))
 
     target_datasets = cfg["input"].get("target_datasets", ["fgadr", "uwf700"])
 
@@ -50,6 +51,7 @@ def main() -> None:
                 debug_dir / f"{dataset}_{split_name}",
                 tile_mode=False,
                 min_comp_area=int(cfg["build"].get("min_component_area", 8)),
+                debug_max_images=debug_max,
             )
             coco_tiles = build_coco_from_manifest(
                 ds_rows,
@@ -61,6 +63,7 @@ def main() -> None:
                 tile_mode=True,
                 min_comp_area=int(cfg["build"].get("min_component_area", 8)),
                 min_tile_box_ratio=float(cfg["build"].get("min_tile_box_ratio", 0.2)),
+                debug_max_images=0,
             )
 
             summary[f"{dataset}_{split_name}"] = {

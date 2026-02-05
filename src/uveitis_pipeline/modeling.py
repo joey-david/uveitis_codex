@@ -15,9 +15,15 @@ from torchvision.ops import MultiScaleRoIAlign
 
 
 def _load_retfound_vit_l(img_size: int):
+    repo = Path(__file__).resolve().parents[2]
     candidates = [
-        (Path(__file__).resolve().parents[2] / ".." / "RETFound").resolve(),
-        (Path(__file__).resolve().parents[2] / ".." / "retfound").resolve(),
+        (repo / "RETFound").resolve(),
+        (repo / "retfound").resolve(),
+        (repo / "third_party" / "RETFound").resolve(),
+        (repo / "third_party" / "retfound").resolve(),
+        (repo / "third_party" / "RETFound_MAE").resolve(),
+        (repo / ".." / "RETFound").resolve(),
+        (repo / ".." / "retfound").resolve(),
     ]
     retfound_dir = next((p for p in candidates if p.exists()), candidates[0])
     if str(retfound_dir) not in sys.path:
@@ -70,6 +76,14 @@ class RetFoundSimpleFPN(nn.Module):
         if ckpt_path:
             state = torch.load(ckpt_path, map_location="cpu")
             cleaned = _clean_checkpoint_dict(state)
+            if "pos_embed" in cleaned and hasattr(self.vit, "pos_embed"):
+                want = tuple(self.vit.pos_embed.shape)
+                got = tuple(cleaned["pos_embed"].shape)
+                if want != got:
+                    n = int(self.vit.pos_embed.shape[1] - 1)
+                    g = int(math.sqrt(max(n, 1)))
+                    h = w = g
+                    cleaned["pos_embed"] = _interpolate_pos_embed(cleaned["pos_embed"], h, w)
             self.vit.load_state_dict(cleaned, strict=False)
 
         self.set_freeze_blocks(freeze_blocks)
@@ -163,6 +177,8 @@ def build_detector(cfg: dict) -> FasterRCNN:
     model = FasterRCNN(
         backbone=backbone,
         num_classes=num_classes,
+        min_size=int(model_cfg.get("input_size", 768)),
+        max_size=int(model_cfg.get("input_size", 768)),
         rpn_anchor_generator=anchor_generator,
         box_roi_pool=roi_pooler,
         rpn_fg_iou_thresh=float(model_cfg.get("rpn_fg_iou_thresh", 0.7)),
@@ -173,6 +189,8 @@ def build_detector(cfg: dict) -> FasterRCNN:
         rpn_post_nms_top_n_train=int(model_cfg.get("rpn_post_nms_top_n_train", 1000)),
         rpn_pre_nms_top_n_test=int(model_cfg.get("rpn_pre_nms_top_n_test", 1000)),
         rpn_post_nms_top_n_test=int(model_cfg.get("rpn_post_nms_top_n_test", 500)),
+        box_score_thresh=float(model_cfg.get("box_score_thresh", 0.0)),
+        box_nms_thresh=float(model_cfg.get("box_nms_thresh", 0.5)),
         box_detections_per_img=int(model_cfg.get("box_detections_per_img", 200)),
     )
     return model

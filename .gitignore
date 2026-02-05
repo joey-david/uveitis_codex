@@ -62,3 +62,4 @@ splits/
 models/sam/*.pth
 site/
 out/
+third_party/

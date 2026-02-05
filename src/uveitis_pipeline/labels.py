@@ -123,6 +123,7 @@ def build_coco_from_manifest(
     tile_mode: bool,
     min_comp_area: int = 8,
     min_tile_box_ratio: float = 0.2,
+    debug_max_images: int = 0,
 ) -> dict:
     categories = class_map_cfg["categories"]
     cat_to_id = {c: i + 1 for i, c in enumerate(categories)}
@@ -137,6 +138,7 @@ def build_coco_from_manifest(
         "categories": [{"id": i + 1, "name": c} for i, c in enumerate(categories)],
     }
     ann_id = 1
+    dbg_written = 0
 
     for row in manifest_rows:
         if row["image_id"] not in split_ids:
@@ -210,8 +212,10 @@ def build_coco_from_manifest(
                 boxes.append(ann["bbox"])
                 labels.append(categories[ann["class_id"] - 1])
             if boxes:
-                dbg = draw_boxes(read_image(global_path), boxes, labels)
-                write_image(out_debug_dir / f"{image_id}_overlay.png", dbg)
+                if debug_max_images > 0 and dbg_written < debug_max_images:
+                    dbg = draw_boxes(read_image(global_path), boxes, labels)
+                    write_image(out_debug_dir / f"{image_id}_overlay.png", dbg)
+                    dbg_written += 1
             continue
 
         for tile_meta in tiles_meta["tiles"]:

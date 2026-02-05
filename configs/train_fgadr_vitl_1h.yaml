@@ -2,7 +2,7 @@ seed: 42
 
 run:
   output_dir: runs
-  name: fgadr_pretrain
+  name: fgadr_vitl_1h
   tensorboard: true
   save_optimizer: false
   save_epoch_checkpoints: false
@@ -27,19 +27,23 @@ model:
   rpn_post_nms_top_n_train: 1500
   rpn_pre_nms_top_n_test: 1500
   rpn_post_nms_top_n_test: 700
+  box_detections_per_img: 400
 
 training:
   device: cuda
-  epochs: 30
+  epochs: 12
   batch_size: 2
   eval_batch_size: 2
   num_workers: 4
   lr: 0.00005
   min_lr: 0.000001
   weight_decay: 0.0001
-  freeze_epochs: 8
+  freeze_epochs: 4
+  max_train_images: 1200
+  max_val_images: 300
   class_balanced_sampling: false
   eval_iou: 0.3
   fp_image_targets: [0.5, 1.0, 2.0]
   amp: true
   amp_dtype: bf16
+
