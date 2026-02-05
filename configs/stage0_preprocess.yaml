@@ -1,0 +1,29 @@
+input:
+  manifests:
+    - manifests/uwf700.jsonl
+    - manifests/fgadr.jsonl
+    - manifests/deepdrid.jsonl
+    - manifests/eyepacs.jsonl
+
+output:
+  preproc_root: preproc
+
+roi:
+  downsample_max_side: 768
+  sat_threshold: 18
+  crop_pad_px: 12
+
+normalize:
+  method: zscore_rgb
+
+resize:
+  global_size: 1024
+
+tiling:
+  tile_size: 768
+  overlap: 0.25
+
+verify:
+  min_roi_area_ratio: 0.12
+  montage_n: 50
+  reconstruct_n: 50

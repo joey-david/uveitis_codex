@@ -5,6 +5,9 @@ kaggle
 gdown
 pandas
 numpy
+pyyaml
+matplotlib
+Pillow
 
 # Deep Learning & Computer Vision
 torch
@@ -12,4 +15,6 @@ torchvision
 opencv-python
 scikit-learn
 timm
+tensorboard
+wandb
 pytest

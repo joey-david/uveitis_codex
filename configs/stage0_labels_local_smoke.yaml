@@ -1,0 +1,20 @@
+input:
+  manifests:
+    - manifests/local_smoke_mix.jsonl
+  split_json: splits/local_smoke.json
+  class_map_yaml: configs/class_map.yaml
+  preproc_root: preproc
+  target_datasets:
+    - uwf700
+    - fgadr
+  splits:
+    - train
+    - val
+
+build:
+  min_component_area: 12
+  min_tile_box_ratio: 0.2
+
+output:
+  labels_dir: labels_coco
+  debug_dir: labels_debug

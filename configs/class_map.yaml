@@ -1,0 +1,51 @@
+categories:
+  - foyer_choroidien
+  - hyalite
+  - membrane_epiretinenne
+  - vascularite
+  - hemorragie
+  - oedeme_maculaire
+  - nodule_choroidien
+  - papille_excavee
+  - granulome_choroidien
+  - laser_retinien
+  - macroanevrisme_arteriel
+  - atrophie_peripapillaire
+  - trou_opercule
+  - condensations_vitre
+  - exudats
+  - oedeme_papillaire
+  - ischemie_retine
+  - nodule_cotonneux
+  - anneau_weiss
+  - lesion_retine
+
+maps:
+  uwf700:
+    1: foyer_choroidien
+    2: hyalite
+    3: membrane_epiretinenne
+    4: vascularite
+    5: hemorragie
+    6: oedeme_maculaire
+    7: nodule_choroidien
+    8: papille_excavee
+    9: granulome_choroidien
+    10: laser_retinien
+    11: macroanevrisme_arteriel
+    12: atrophie_peripapillaire
+    13: trou_opercule
+    14: condensations_vitre
+    15: exudats
+    16: oedeme_papillaire
+    17: ischemie_retine
+    18: nodule_cotonneux
+    19: anneau_weiss
+    20: lesion_retine
+  fgadr:
+    HardExudate_Masks: exudats
+    SoftExudate_Masks: exudats
+    Hemohedge_Masks: hemorragie
+    Microaneurysms_Masks: macroanevrisme_arteriel
+    IRMA_Masks: ischemie_retine
+    Neovascularization_Masks: vascularite

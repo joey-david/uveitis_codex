@@ -190,7 +190,7 @@ def main():
     parser.add_argument(
         "--csv",
         type=Path,
-        default=Path("variables.csv"),
+        default=Path("Labels/Uveitis/symptom_count.csv"),
         help="CSV with label mapping (default: variables.csv)",
     )
     args = parser.parse_args()
