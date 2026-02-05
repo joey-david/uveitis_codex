@@ -3,7 +3,6 @@
 This map links stage objectives, entry scripts, configs, inputs, and outputs.
 
 For command-by-command Docker execution details (including substage inputs/outputs/expectations), see:
-- [`docker.md`](../../docker.md)
 - [`Docker Runbook`](docker-runbook.md)
 
 ## Stage 0.0: Build manifests + splits
@@ -29,7 +28,7 @@ For command-by-command Docker execution details (including substage inputs/outpu
 
 - Script: [`scripts/stage0_build_labels.py`](../scripts/stage0_build_labels.md)
 - Configs:
-  - [`configs/stage0_labels.yaml`](../configs/index.md#stage0-labels)
+  - [`configs/stage0_labels.yaml`](../configs/index.md#stage0-label-building)
   - smoke/local variants
 - Input:
   - manifests + split file

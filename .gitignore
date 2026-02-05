@@ -60,3 +60,4 @@ preproc/
 pseudo_labels/
 splits/
 models/sam/*.pth
+site/

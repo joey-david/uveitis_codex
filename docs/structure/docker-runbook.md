@@ -1,10 +1,29 @@
 # Docker Runbook
 
-Primary runbook:
-- [`docker.md`](../../docker.md)
+Use this page as the in-doc reference for running the project in Docker.
 
-This file points to the full Docker pipeline instructions in the repository root. That runbook includes:
-1. General Docker environment setup and launch
-2. How to run normal Python commands once inside the container
-3. Every stage/substage command with explicit inputs, outputs, and expected behavior
-4. QA/report commands and artifact export
+## Quick Start
+
+1. Build image:
+
+```bash
+docker build -t uveitis-codex:latest .
+```
+
+2. Launch GPU container:
+
+```bash
+docker run --rm -it --gpus all \
+  --shm-size=16g \
+  -v "$PWD:/workspace" \
+  -w /workspace \
+  uveitis-codex:latest bash
+```
+
+3. Inside container, run regular pipeline commands (`python scripts/...`) as listed in:
+- [`Stage Map`](stage-map.md)
+
+4. Full command-by-command runbook is maintained in the repository root file:
+- `docker.md`
+
+Note: `docker.md` is outside the MkDocs docs directory, so it is referenced as a path here (not a docs hyperlink).
