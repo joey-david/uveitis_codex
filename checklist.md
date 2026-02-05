@@ -2,7 +2,7 @@
 
 ### 0.0 Dataset ingestion + manifest
 
-- [x] Implemented in `src/uveitis_pipeline/manifest.py` + `scripts/stage0_build_manifest.py`; writes unified JSONL/CSV manifests and patient-grouped split JSON.
+- [x] Implemented in `src/uveitis_pipeline/manifest.py` + `scripts/stage0_build_manifest.py`; writes unified JSONL/CSV manifests and patient-grouped split JSON. Docs: [`docs/scripts/stage0_build_manifest.md`](docs/scripts/stage0_build_manifest.md), [`docs/api/manifest.md`](docs/api/manifest.md), [`docs/configs/index.md`](docs/configs/index.md), [`docs/structure/stage-map.md`](docs/structure/stage-map.md).
 
 **Implement**
 
@@ -26,7 +26,7 @@
 
 ### 0.1 Retina ROI mask + crop
 
-- [x] Implemented in `src/uveitis_pipeline/preprocess.py` (`compute_roi_mask`, `crop_to_roi`) and run via `scripts/stage0_preprocess.py`.
+- [x] Implemented in `src/uveitis_pipeline/preprocess.py` (`compute_roi_mask`, `crop_to_roi`) and run via `scripts/stage0_preprocess.py`. Docs: [`docs/scripts/stage0_preprocess.md`](docs/scripts/stage0_preprocess.md), [`docs/api/preprocess.md`](docs/api/preprocess.md), [`docs/configs/index.md`](docs/configs/index.md), [`docs/structure/stage-map.md`](docs/structure/stage-map.md).
 
 **Implement**
 
@@ -50,7 +50,7 @@
 
 ### 0.2 Retina-only photometric normalization
 
-- [x] Implemented in `src/uveitis_pipeline/preprocess.py` (`normalize_color`: `zscore_rgb|grayworld|clahe_luminance`) with ROI-only statistics and metadata export.
+- [x] Implemented in `src/uveitis_pipeline/preprocess.py` (`normalize_color`: `zscore_rgb|grayworld|clahe_luminance`) with ROI-only statistics and metadata export. Docs: [`docs/scripts/stage0_preprocess.md`](docs/scripts/stage0_preprocess.md), [`docs/api/preprocess.md`](docs/api/preprocess.md), [`docs/configs/index.md`](docs/configs/index.md), [`docs/structure/stage-map.md`](docs/structure/stage-map.md).
 
 **Implement**
 
@@ -71,7 +71,7 @@
 
 ### 0.3 Canonical resizing + tiling
 
-- [x] Implemented in `src/uveitis_pipeline/preprocess.py` (`resize_global`, `tile`, `reconstruct_from_tiles`) plus coverage/reconstruction verification in `scripts/stage0_preprocess.py`.
+- [x] Implemented in `src/uveitis_pipeline/preprocess.py` (`resize_global`, `tile`, `reconstruct_from_tiles`) plus coverage/reconstruction verification in `scripts/stage0_preprocess.py`. Docs: [`docs/scripts/stage0_preprocess.md`](docs/scripts/stage0_preprocess.md), [`docs/api/preprocess.md`](docs/api/preprocess.md), [`docs/configs/index.md`](docs/configs/index.md), [`docs/structure/stage-map.md`](docs/structure/stage-map.md).
 
 **Implement**
 
@@ -95,7 +95,7 @@
 
 ### 0.4 Label conversion + harmonization
 
-- [x] Implemented in `src/uveitis_pipeline/labels.py` + `configs/class_map.yaml` + `scripts/stage0_build_labels.py`; supports FGADR masks->HBB and UWF OBB->HBB with COCO export/debug overlays.
+- [x] Implemented in `src/uveitis_pipeline/labels.py` + `configs/class_map.yaml` + `scripts/stage0_build_labels.py`; supports FGADR masks->HBB and UWF OBB->HBB with COCO export/debug overlays. Docs: [`docs/scripts/stage0_build_labels.md`](docs/scripts/stage0_build_labels.md), [`docs/api/labels.md`](docs/api/labels.md), [`docs/configs/index.md`](docs/configs/index.md), [`docs/structure/stage-map.md`](docs/structure/stage-map.md).
 
 **Implement**
 
@@ -121,7 +121,7 @@
 
 ### 1.0 Training scaffold
 
-- [x] Implemented in `src/uveitis_pipeline/train.py`, `src/uveitis_pipeline/modeling.py`, `scripts/train_detector.py`, and `configs/train_*.yaml`; YAML-driven Faster R-CNN with RetFound adapter, checkpoints, metrics, seeds, tensorboard/wandb hooks.
+- [x] Implemented in `src/uveitis_pipeline/train.py`, `src/uveitis_pipeline/modeling.py`, `scripts/train_detector.py`, and `configs/train_*.yaml`; YAML-driven Faster R-CNN with RetFound adapter, checkpoints, metrics, seeds, tensorboard/wandb hooks. Docs: [`docs/scripts/train_detector.md`](docs/scripts/train_detector.md), [`docs/api/train.md`](docs/api/train.md), [`docs/api/modeling.md`](docs/api/modeling.md), [`docs/configs/index.md`](docs/configs/index.md), [`docs/structure/stage-map.md`](docs/structure/stage-map.md).
 
 **Implement**
 
@@ -146,7 +146,7 @@
 
 ### 1.1 Inference + merge (tile → global)
 
-- [x] Implemented in `src/uveitis_pipeline/infer.py` + `scripts/infer_detector.py`; tile prediction, global coordinate merge, class-wise NMS, JSON export and optional overlays.
+- [x] Implemented in `src/uveitis_pipeline/infer.py` + `scripts/infer_detector.py`; tile prediction, global coordinate merge, class-wise NMS, JSON export and optional overlays. Docs: [`docs/scripts/infer_detector.md`](docs/scripts/infer_detector.md), [`docs/api/infer.md`](docs/api/infer.md), [`docs/configs/index.md`](docs/configs/index.md), [`docs/structure/stage-map.md`](docs/structure/stage-map.md).
 
 **Implement**
 
@@ -169,7 +169,7 @@
 
 ### 2.0 FGADR box dataset build
 
-- [x] Implemented through Stage 0.4 converters (`src/uveitis_pipeline/labels.py`) and FGADR mapping in `configs/class_map.yaml`; area filtering is configurable (`min_component_area`).
+- [x] Implemented through Stage 0.4 converters (`src/uveitis_pipeline/labels.py`) and FGADR mapping in `configs/class_map.yaml`; area filtering is configurable (`min_component_area`). Docs: [`docs/scripts/stage0_build_labels.md`](docs/scripts/stage0_build_labels.md), [`docs/api/labels.md`](docs/api/labels.md), [`docs/configs/index.md`](docs/configs/index.md), [`docs/structure/stage-map.md`](docs/structure/stage-map.md).
 
 **Implement**
 
@@ -189,7 +189,7 @@
 
 ### 2.1 Train detector on FGADR
 
-- [x] Training path implemented with dedicated config `configs/train_fgadr.yaml` and output structure in `runs/fgadr_pretrain/...` (code ready; full long run is command-driven).
+- [x] Training path implemented with dedicated config `configs/train_fgadr.yaml` and output structure in `runs/fgadr_pretrain/...` (code ready; full long run is command-driven). Docs: [`docs/scripts/train_detector.md`](docs/scripts/train_detector.md), [`docs/api/train.md`](docs/api/train.md), [`docs/configs/index.md`](docs/configs/index.md), [`docs/structure/stage-map.md`](docs/structure/stage-map.md).
 
 **Implement**
 
@@ -212,7 +212,7 @@
 
 ### 3.0 Uveitis dataset build (HBB target)
 
-- [x] Implemented via UWF OBB->HBB conversion in `src/uveitis_pipeline/labels.py` and exported as COCO through `scripts/stage0_build_labels.py`.
+- [x] Implemented via UWF OBB->HBB conversion in `src/uveitis_pipeline/labels.py` and exported as COCO through `scripts/stage0_build_labels.py`. Docs: [`docs/scripts/stage0_build_labels.md`](docs/scripts/stage0_build_labels.md), [`docs/api/labels.md`](docs/api/labels.md), [`docs/configs/index.md`](docs/configs/index.md), [`docs/structure/stage-map.md`](docs/structure/stage-map.md).
 
 **Implement**
 
@@ -232,7 +232,7 @@
 
 ### 3.1 Fine-tuning with lax-box-friendly settings
 
-- [x] Implemented in config/code path: `configs/train_uveitis_ft.yaml` (lower IoU thresholds, higher proposal counts, class-balanced sampling, freeze/unfreeze schedule, lower LR) + `src/uveitis_pipeline/train.py`.
+- [x] Implemented in config/code path: `configs/train_uveitis_ft.yaml` (lower IoU thresholds, higher proposal counts, class-balanced sampling, freeze/unfreeze schedule, lower LR) + `src/uveitis_pipeline/train.py`. Docs: [`docs/scripts/train_detector.md`](docs/scripts/train_detector.md), [`docs/api/train.md`](docs/api/train.md), [`docs/configs/index.md`](docs/configs/index.md), [`docs/structure/stage-map.md`](docs/structure/stage-map.md).
 
 **Implement**
 
@@ -261,7 +261,7 @@
 
 ### 4.A Optional: Self-supervised UWF adaptation (only if easy)
 
-- [x] Hook implemented in `scripts/stage4_continue_mae.py`; auto-checks for `../RETFound/main_pretrain.py` and runs continuation command when available.
+- [x] Hook implemented in `scripts/stage4_continue_mae.py`; auto-checks for `../RETFound/main_pretrain.py` and runs continuation command when available. Docs: [`docs/scripts/stage4_continue_mae.md`](docs/scripts/stage4_continue_mae.md), [`docs/structure/stage-map.md`](docs/structure/stage-map.md).
 
 **Implement**
 
@@ -279,7 +279,7 @@
 
 ### 4.B Optional: pseudo-label expansion
 
-- [x] Implemented in `scripts/stage4_pseudo_label_expand.py`; merges high-confidence predictions into COCO pseudo-label training set.
+- [x] Implemented in `scripts/stage4_pseudo_label_expand.py`; merges high-confidence predictions into COCO pseudo-label training set. Docs: [`docs/scripts/stage4_pseudo_label_expand.md`](docs/scripts/stage4_pseudo_label_expand.md), [`docs/structure/stage-map.md`](docs/structure/stage-map.md).
 
 **Implement**
 
@@ -316,7 +316,7 @@
 
 ## Bottleneck identification hooks (build these in early)
 
-- [x] Implemented:
+- [x] Implemented. Docs: [`docs/scripts/report_dataset.md`](docs/scripts/report_dataset.md), [`docs/scripts/report_preproc.md`](docs/scripts/report_preproc.md), [`docs/scripts/report_training.md`](docs/scripts/report_training.md), [`docs/scripts/ablate_preproc.md`](docs/scripts/ablate_preproc.md), [`docs/api/reports.md`](docs/api/reports.md), [`docs/structure/stage-map.md`](docs/structure/stage-map.md).
   - `scripts/report_dataset.py` (`src/uveitis_pipeline/reports.py::report_dataset`)
   - `scripts/report_preproc.py` (`report_preproc`)
   - `scripts/report_training.py` (`report_training`)

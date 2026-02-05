@@ -46,3 +46,14 @@ mtsn_model.pth
 # node_modules
 node_modules/
 package-lock.json
+
+# pipeline-generated artifacts
+eval/
+labels_coco/
+labels_debug/
+manifests/
+preds/
+preds_vis/
+preproc/
+pseudo_labels/
+splits/
