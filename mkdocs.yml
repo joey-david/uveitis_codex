@@ -6,6 +6,7 @@ nav:
   - Structure:
       - Folder Reference: structure/folder-reference.md
       - Stage Map: structure/stage-map.md
+      - Docker Runbook: structure/docker-runbook.md
   - Scripts:
       - Script Catalog: scripts/index.md
       - stage0_build_manifest.py: scripts/stage0_build_manifest.md
@@ -19,6 +20,7 @@ nav:
       - report_preproc.py: scripts/report_preproc.md
       - report_training.py: scripts/report_training.md
       - ablate_preproc.py: scripts/ablate_preproc.md
+      - visualize_fundus_masks.py: scripts/visualize_fundus_masks.md
   - Configs:
       - Config Catalog: configs/index.md
   - API:

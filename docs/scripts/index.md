@@ -18,3 +18,8 @@ Each page documents one executable in `scripts/`.
 2. [`report_preproc.py`](report_preproc.md)
 3. [`report_training.py`](report_training.md)
 4. [`ablate_preproc.py`](ablate_preproc.md)
+
+
+## Dataset utility scripts
+
+1. [`datasets/uwf-700/visualize_fundus_masks.py`](visualize_fundus_masks.md)

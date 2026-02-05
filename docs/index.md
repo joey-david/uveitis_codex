@@ -9,9 +9,10 @@ This documentation covers the pipeline scaffold implemented in this repository:
 Start here:
 1. [Folder Reference](structure/folder-reference.md)
 2. [Stage Map](structure/stage-map.md)
-3. [Script Catalog](scripts/index.md)
-4. [Config Catalog](configs/index.md)
-5. [API Reference](api/index.md)
+3. [Docker Runbook](structure/docker-runbook.md)
+4. [Script Catalog](scripts/index.md)
+5. [Config Catalog](configs/index.md)
+6. [API Reference](api/index.md)
 
 How to use this as a newcomer:
 1. Read [Stage Map](structure/stage-map.md) for the full flow.

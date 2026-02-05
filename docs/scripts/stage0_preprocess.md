@@ -2,6 +2,7 @@
 
 ## Purpose
 Run Stage 0 preprocessing (ROI mask, crop, normalization, global resize, tiles) and write verification artifacts.
+For UWF images, ROI can use prompted SAM (`roi.method_by_dataset.uwf700: sam_prompted`) before color normalization.
 
 ## CLI
 ```bash
@@ -10,6 +11,7 @@ python scripts/stage0_preprocess.py --config configs/stage0_preprocess.yaml [--m
 
 ## Reads
 - Input manifests listed in config (or `--manifest` override).
+- `roi.sam` checkpoint and prompts when SAM mode is enabled.
 
 ## Writes
 - `preproc/roi_masks`, `preproc/crops`, `preproc/crop_meta`

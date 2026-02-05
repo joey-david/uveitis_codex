@@ -42,6 +42,16 @@ Pipeline for UWF uveitis lesion localization/classification with a RetFound-adap
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+mkdir -p models/sam
+wget -O models/sam/sam_vit_h_4b8939.pth https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
+```
+
+SAM-based UWF masking test:
+```bash
+python datasets/uwf-700/visualize_fundus_masks.py \
+  --images datasets/uwf-700/Images/Uveitis \
+  --config configs/stage0_preprocess.yaml \
+  --max-images 100
 ```
 
 ## End-to-end command flow

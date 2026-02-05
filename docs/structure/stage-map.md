@@ -2,6 +2,10 @@
 
 This map links stage objectives, entry scripts, configs, inputs, and outputs.
 
+For command-by-command Docker execution details (including substage inputs/outputs/expectations), see:
+- [`docker.md`](../../docker.md)
+- [`Docker Runbook`](docker-runbook.md)
+
 ## Stage 0.0: Build manifests + splits
 
 - Script: [`scripts/stage0_build_manifest.py`](../scripts/stage0_build_manifest.md)

@@ -33,10 +33,21 @@ Consumed by:
 Key schema:
 - `input.manifests`: list[path], manifest JSONL files.
 - `output.preproc_root`: path.
+- `roi.method`: default ROI method (e.g. `threshold`).
+- `roi.method_by_dataset.<dataset>`: optional per-dataset override (e.g. `uwf700: sam_prompted`).
 - `roi.downsample_max_side`: int.
 - `roi.sat_threshold`: int.
 - `roi.crop_pad_px`: int.
+- `roi.sam.checkpoint`: SAM checkpoint path.
+- `roi.sam.model_type`: SAM backbone key (`vit_h`, `vit_l`, `vit_b`).
+- `roi.sam.device`: inference device (`cuda` or `cpu`).
+- `roi.sam.fallback_to_threshold`: bool; use threshold mask if SAM is unavailable.
+- `roi.sam.multimask_output`: bool.
+- `roi.sam.points_norm`: list of normalized prompt triplets `[x_norm, y_norm, label]`.
+- `roi.sam.open_kernel|close_kernel`: post-mask morphology kernel sizes.
+- `roi.sam.min_area_ratio|max_area_ratio|max_border_touch_ratio`: mask quality constraints for selecting SAM output.
 - `normalize.method`: one of `zscore_rgb`, `grayworld`, `clahe_luminance`.
+- `normalize.stats_erode_px`: int erosion radius for stats mask (reduces border contamination in normalization stats).
 - `resize.global_size`: int.
 - `tiling.tile_size`: int.
 - `tiling.overlap`: float in `[0,1)`.
