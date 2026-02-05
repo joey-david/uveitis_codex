@@ -51,7 +51,7 @@ Build a practical model pipeline that localizes and classifies uveitis-related s
 | ![UWF example](assets/img/uwf_example.jpg) | ![Regular fundus example](assets/img/regular_fundus_example.jpg) |
 
 Source images:
-- UWF: `datasets/uwf-700/Images/Uveitis/Uveitis-001.jpg`
+- UWF: `datasets/uwf-700/Images/Uveitis/Uveitis-023.jpg`
 - Regular fundus: `datasets/eyepacs/train/13_left.jpg`
 
 ### RETFound Illustration
