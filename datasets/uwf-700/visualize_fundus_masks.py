@@ -16,7 +16,7 @@ from matplotlib.widgets import Button
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from uveitis_pipeline.common import load_yaml, read_image
-from uveitis_pipeline.preprocess import SamPromptMasker, compute_roi_mask
+from uveitis_pipeline.preprocess import Sam2PromptMasker, SamPromptMasker, compute_roi_mask
 
 
 def sort_key(path: Path):
@@ -39,15 +39,28 @@ class MaskViewer:
         self.cache: dict[Path, tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
 
         self.sam_masker = None
+        self.sam2_masker = None
+
         use_sam = (
             roi_cfg.get("method") == "sam_prompted"
             or roi_cfg.get("method_by_dataset", {}).get("uwf700") == "sam_prompted"
         )
+        use_sam2 = (
+            roi_cfg.get("method") == "sam2_prompted"
+            or roi_cfg.get("method_by_dataset", {}).get("uwf700") == "sam2_prompted"
+        )
+
         if use_sam:
             try:
                 self.sam_masker = SamPromptMasker(roi_cfg.get("sam", {}))
             except Exception as e:
-                print(f"SAM unavailable, using threshold fallback: {e}")
+                print(f"SAM (v1) unavailable, using fallback: {e}")
+
+        if use_sam2:
+            try:
+                self.sam2_masker = Sam2PromptMasker(roi_cfg.get("sam2", {}))
+            except Exception as e:
+                print(f"SAM2 unavailable, using fallback: {e}")
 
         self.fig, self.axes = plt.subplots(1, 3, figsize=(16, 6))
         plt.subplots_adjust(bottom=0.16)
@@ -80,7 +93,13 @@ class MaskViewer:
             return self.cache[image_path]
 
         image = read_image(image_path)
-        mask = compute_roi_mask(image, self.roi_cfg, dataset="uwf700", sam_masker=self.sam_masker)
+        mask = compute_roi_mask(
+            image,
+            self.roi_cfg,
+            dataset="uwf700",
+            sam_masker=self.sam_masker,
+            sam2_masker=self.sam2_masker,
+        )
         masked = image.copy()
         masked[mask == 0] = 0
         boundary = overlay_boundary(image, mask)

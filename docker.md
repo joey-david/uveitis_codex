@@ -4,6 +4,23 @@ This runbook is the command-by-command reference for running the full pipeline i
 
 ## 1) General Docker Environment Setup
 
+### 1.0 GPU smoke test (host shell, before heavy builds)
+
+This host setup requires `--runtime=nvidia` (using `--gpus all` alone can yield `Failed to initialize NVML: Unknown Error`).
+
+Minimal NVML check:
+
+```bash
+docker run --rm --runtime=nvidia --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi -L
+```
+
+PyTorch CUDA check (matches our base image CUDA stack):
+
+```bash
+docker run --rm --runtime=nvidia --gpus all pytorch/pytorch:2.2.2-cuda11.8-cudnn8-runtime \
+  python -c "import torch; print('cuda', torch.cuda.is_available(), torch.cuda.device_count(), torch.cuda.get_device_name(0))"
+```
+
 ### 1.1 Build image (host shell)
 
 ```bash
@@ -25,8 +42,10 @@ What to expect:
 ### 1.2 Launch interactive GPU container (host shell)
 
 ```bash
-docker run --rm -it --gpus all \
+docker run --rm -it --runtime=nvidia --gpus all \
   --shm-size=16g \
+  --user "$(id -u):$(id -g)" \
+  -e HOME=/tmp \
   -v "$PWD:/workspace" \
   -w /workspace \
   uveitis-codex:latest bash
@@ -36,6 +55,12 @@ Alternative:
 
 ```bash
 docker compose run --rm train bash
+```
+
+If you want artifacts written to the mounted repo to be owned by your host user (recommended):
+
+```bash
+docker compose run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp train bash
 ```
 
 What it takes in:
@@ -68,18 +93,19 @@ What it produces:
 What to expect:
 - `cuda_available: True` and `gpu_count >= 1` on GPU host
 
-### 1.4 Download SAM checkpoint once (inside container)
+### 1.4 Download SAM2 checkpoint once (inside container)
 
 ```bash
-mkdir -p models/sam
-wget -O models/sam/sam_vit_h_4b8939.pth https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
+mkdir -p models/sam2
+curl -L --fail -o models/sam2/sam2.1_hiera_base_plus.pt \
+  https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_base_plus.pt
 ```
 
 What it takes in:
 - internet access
 
 What it produces:
-- `models/sam/sam_vit_h_4b8939.pth`
+- `models/sam2/sam2.1_hiera_base_plus.pt`
 
 What to expect:
 - download progress and saved checkpoint file
@@ -95,6 +121,17 @@ python datasets/uwf-700/visualize_fundus_masks.py \
 
 What to expect:
 - interactive viewer with three panes: boundary overlay, masked fundus-only image, binary mask
+
+Non-interactive QA on 50 images (writes overlays/masks to disk):
+
+```bash
+python scripts/qa_fundus_mask_sam2.py --images datasets/uwf-700/Images --n 50 --out-dir eval/sam2_fundus_qa
+```
+
+Outputs:
+- `eval/sam2_fundus_qa/overlays/*.png` (raw + mask boundary)
+- `eval/sam2_fundus_qa/masked/*.png` (fundus-only RGB)
+- `eval/sam2_fundus_qa/masks/*.png` (binary mask)
 
 ## 2) Pipeline Steps and Substages (Run Inside Docker Env)
 
@@ -124,7 +161,7 @@ python scripts/stage0_preprocess.py --config configs/stage0_preprocess.yaml
 
 Takes in:
 - manifests listed in `configs/stage0_preprocess.yaml`
-- UWF SAM settings from `roi.sam` (fallback to threshold if unavailable)
+- UWF SAM2 settings from `roi.sam2` (fallback to threshold if unavailable)
 
 Produces:
 - `preproc/roi_masks/{image_id}.png`

@@ -2,6 +2,7 @@ services:
   train:
     build: .
     gpus: all
+    runtime: nvidia
     shm_size: "16gb"
     ipc: host
     volumes:

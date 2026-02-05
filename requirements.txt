@@ -10,12 +10,12 @@ matplotlib
 Pillow
 
 # Deep Learning & Computer Vision
-torch
-torchvision
+# NOTE: torch/torchvision are provided by the Docker base image (CUDA-enabled).
+# Keeping them out of pip/uv requirements avoids downloading a different CUDA stack.
 opencv-python
 scikit-learn
 timm
 tensorboard
 wandb
 pytest
-git+https://github.com/facebookresearch/segment-anything.git
+git+https://github.com/facebookresearch/sam2.git

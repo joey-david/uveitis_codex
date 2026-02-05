@@ -13,8 +13,10 @@ docker build -t uveitis-codex:latest .
 2. Launch GPU container:
 
 ```bash
-docker run --rm -it --gpus all \
+docker run --rm -it --runtime=nvidia --gpus all \
   --shm-size=16g \
+  --user "$(id -u):$(id -g)" \
+  -e HOME=/tmp \
   -v "$PWD:/workspace" \
   -w /workspace \
   uveitis-codex:latest bash
