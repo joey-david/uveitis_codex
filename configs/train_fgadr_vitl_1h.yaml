@@ -43,7 +43,7 @@ training:
   max_val_images: 300
   class_balanced_sampling: false
   eval_iou: 0.3
+  eval_score_thresh: 0.1
   fp_image_targets: [0.5, 1.0, 2.0]
   amp: true
   amp_dtype: bf16
-

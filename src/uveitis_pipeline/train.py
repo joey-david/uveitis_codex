@@ -48,7 +48,7 @@ def _match_detections(pred_boxes, pred_scores, pred_labels, gt_boxes, gt_labels,
     return per_class
 
 
-def _evaluate(model, loader, device, iou_thresh, fp_targets):
+def _evaluate(model, loader, device, iou_thresh, fp_targets, score_thresh: float):
     model.eval()
     class_stats = defaultdict(lambda: {"tp": 0, "fp": 0, "fn": 0})
     fp_scores = defaultdict(list)
@@ -65,6 +65,10 @@ def _evaluate(model, loader, device, iou_thresh, fp_targets):
                 pred_boxes = out["boxes"].cpu()
                 pred_scores = out["scores"].cpu()
                 pred_labels = out["labels"].cpu()
+                keep = pred_scores >= float(score_thresh)
+                pred_boxes = pred_boxes[keep]
+                pred_scores = pred_scores[keep]
+                pred_labels = pred_labels[keep]
 
                 stats = _match_detections(pred_boxes, pred_scores, pred_labels, gt_boxes, gt_labels, iou_thresh)
                 for cls, s in stats.items():
@@ -233,6 +237,7 @@ def train_from_config(cfg: dict) -> dict:
             device,
             iou_thresh=float(cfg["training"].get("eval_iou", 0.3)),
             fp_targets=fp_targets,
+            score_thresh=float(cfg["training"].get("eval_score_thresh", 0.1)),
         )
 
         row = {
