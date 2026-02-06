@@ -197,7 +197,13 @@ def train_from_config(cfg: dict) -> dict:
 
     if cfg["training"].get("init_checkpoint"):
         state = torch.load(cfg["training"]["init_checkpoint"], map_location="cpu")
-        model.load_state_dict(state["model"], strict=False)
+        init_mode = str(cfg["training"].get("init_mode", "full")).lower()
+        sd = state["model"]
+        if init_mode == "backbone_only":
+            sd = {k: v for k, v in sd.items() if k.startswith("backbone.")}
+        elif init_mode != "full":
+            raise ValueError(f"Unknown training.init_mode: {init_mode}")
+        model.load_state_dict(sd, strict=False)
 
     best_score = -1.0
     metrics_path = run_dir / "metrics.jsonl"

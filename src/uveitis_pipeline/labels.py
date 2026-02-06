@@ -39,7 +39,7 @@ def _parse_uwf_obb(
         if len(parts) != 9:
             continue
         cls_raw = str(int(float(parts[0])))
-        points = [float(v) for v in parts[1:]]
+        points = [float(v) for v in parts[1:]]  # normalized x1 y1 ... x4 y4 in raw image coords
         xs = [points[i] * width for i in range(0, len(points), 2)]
         ys = [points[i] * height for i in range(1, len(points), 2)]
         x1, y1, x2, y2 = min(xs), min(ys), max(xs), max(ys)
@@ -48,6 +48,7 @@ def _parse_uwf_obb(
                 "class_name": class_map.get(cls_raw, f"uwf_{cls_raw}"),
                 "bbox_xyxy": [x1, y1, x2, y2],
                 "obb": points,
+                "obb_xy": [v for xy in zip(xs, ys) for v in xy],
             }
         )
     return anns
@@ -81,6 +82,19 @@ def _project_to_global(box: list[float], crop_meta: dict, global_meta: dict) -> 
     x2 = (box[2] - cx0 + px) * scale
     y2 = (box[3] - cy0 + py) * scale
     return [x1, y1, x2, y2]
+
+
+def _project_point_to_global(x: float, y: float, crop_meta: dict, global_meta: dict) -> tuple[float, float]:
+    cx0, cy0, _, _ = crop_meta["bbox_xyxy"]
+    px, py = global_meta["pad_xy"]
+    scale = global_meta["scale"]
+    return ((x - cx0 + px) * scale, (y - cy0 + py) * scale)
+
+
+def _clip_point(x: float, y: float, width: int, height: int) -> tuple[float, float]:
+    x = float(np.clip(x, 0, width - 1))
+    y = float(np.clip(y, 0, height - 1))
+    return x, y
 
 
 def _clip_box(box: list[float], width: int, height: int) -> list[float] | None:
@@ -176,11 +190,26 @@ def build_coco_from_manifest(
         for ann in anns_src:
             if ann["class_name"] not in cat_to_id:
                 continue
-            gbox = _project_to_global(ann["bbox_xyxy"], crop_meta, global_meta)
-            gbox = _clip_box(gbox, g_w, g_h)
-            if gbox is None:
-                continue
-            global_anns.append({"class_id": cat_to_id[ann["class_name"]], "bbox": gbox, "obb": ann.get("obb")})
+            obb_xy = ann.get("obb_xy")
+            if obb_xy and len(obb_xy) == 8:
+                gpts = []
+                for i in range(0, 8, 2):
+                    gx, gy = _project_point_to_global(float(obb_xy[i]), float(obb_xy[i + 1]), crop_meta, global_meta)
+                    gx, gy = _clip_point(gx, gy, g_w, g_h)
+                    gpts.append((gx, gy))
+                xs = [p[0] for p in gpts]
+                ys = [p[1] for p in gpts]
+                gbox = _clip_box([min(xs), min(ys), max(xs), max(ys)], g_w, g_h)
+                if gbox is None:
+                    continue
+                obb_norm = [v for x, y in gpts for v in (x / g_w, y / g_h)]
+                global_anns.append({"class_id": cat_to_id[ann["class_name"]], "bbox": gbox, "obb": obb_norm})
+            else:
+                gbox = _project_to_global(ann["bbox_xyxy"], crop_meta, global_meta)
+                gbox = _clip_box(gbox, g_w, g_h)
+                if gbox is None:
+                    continue
+                global_anns.append({"class_id": cat_to_id[ann["class_name"]], "bbox": gbox})
 
         if not tile_mode:
             coco_img_id = len(coco["images"]) + 1
@@ -232,17 +261,25 @@ def build_coco_from_manifest(
                     continue
                 if _box_area(inter) / max(_box_area(ann["bbox"]), 1.0) < min_tile_box_ratio:
                     continue
-                anns_tile.append(
-                    {
-                        "class_id": ann["class_id"],
-                        "bbox": [
-                            inter[0] - tile_box[0],
-                            inter[1] - tile_box[1],
-                            inter[2] - tile_box[0],
-                            inter[3] - tile_box[1],
-                        ],
-                    }
-                )
+                tile_ann = {
+                    "class_id": ann["class_id"],
+                    "bbox": [
+                        inter[0] - tile_box[0],
+                        inter[1] - tile_box[1],
+                        inter[2] - tile_box[0],
+                        inter[3] - tile_box[1],
+                    ],
+                }
+                # Keep OBB only when fully contained in the tile (avoid clipped polys).
+                if ann.get("obb") and len(ann["obb"]) == 8:
+                    pts = list(zip(ann["obb"][0::2], ann["obb"][1::2]))
+                    pts_xy = [(x * g_w, y * g_h) for x, y in pts]
+                    if all(tile_box[0] <= x <= tile_box[2] and tile_box[1] <= y <= tile_box[3] for x, y in pts_xy):
+                        tw = float(tile_box[2] - tile_box[0])
+                        th = float(tile_box[3] - tile_box[1])
+                        tpts_norm = [v for x, y in pts_xy for v in ((x - tile_box[0]) / tw, (y - tile_box[1]) / th)]
+                        tile_ann["obb"] = tpts_norm
+                anns_tile.append(tile_ann)
 
             coco_img_id = len(coco["images"]) + 1
             coco["images"].append(
@@ -266,6 +303,7 @@ def build_coco_from_manifest(
                         "bbox": coco_box,
                         "area": coco_box[2] * coco_box[3],
                         "iscrowd": 0,
+                        "obb": ann.get("obb"),
                     }
                 )
                 ann_id += 1

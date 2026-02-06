@@ -10,6 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 from torchvision.models.detection import FasterRCNN
+from torchvision.models.detection.retinanet import RetinaNet
 from torchvision.models.detection.anchor_utils import AnchorGenerator
 from torchvision.ops import MultiScaleRoIAlign
 
@@ -72,6 +73,9 @@ class RetFoundSimpleFPN(nn.Module):
         self.vit = backbone
         self.out_channels = out_channels
         self.proj = nn.Conv2d(self.vit.embed_dim, out_channels, kernel_size=1)
+        self.smooth = nn.ModuleDict(
+            {k: nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1) for k in ["p2", "p3", "p4", "p5"]}
+        )
 
         if ckpt_path:
             state = torch.load(ckpt_path, map_location="cpu")
@@ -123,14 +127,50 @@ class RetFoundSimpleFPN(nn.Module):
         p2 = F.interpolate(p3, scale_factor=2.0, mode="bilinear", align_corners=False)
         p4 = F.max_pool2d(p3, kernel_size=2, stride=2)
         p5 = F.max_pool2d(p4, kernel_size=2, stride=2)
+
+        p2 = self.smooth["p2"](p2)
+        p3 = self.smooth["p3"](p3)
+        p4 = self.smooth["p4"](p4)
+        p5 = self.smooth["p5"](p5)
         return OrderedDict({"p2": p2, "p3": p3, "p4": p4, "p5": p5})
 
 
-def build_detector(cfg: dict) -> FasterRCNN:
+def build_detector(cfg: dict) -> nn.Module:
     model_cfg = cfg["model"]
     num_classes = int(model_cfg["num_classes"])
 
+    detector = str(model_cfg.get("detector", "fasterrcnn")).lower()
     backbone_name = model_cfg["backbone"]
+    if backbone_name == "resnet50_fpn":
+        if detector == "retinanet":
+            model = torchvision.models.detection.retinanet_resnet50_fpn(
+                weights=None,
+                weights_backbone="DEFAULT",
+                num_classes=num_classes,
+            )
+            model.score_thresh = float(model_cfg.get("box_score_thresh", 0.05))
+            model.nms_thresh = float(model_cfg.get("box_nms_thresh", 0.5))
+            model.detections_per_img = int(model_cfg.get("box_detections_per_img", 300))
+            return model
+        if detector == "fasterrcnn":
+            model = torchvision.models.detection.fasterrcnn_resnet50_fpn(
+                weights=None,
+                weights_backbone="DEFAULT",
+                num_classes=num_classes,
+                rpn_fg_iou_thresh=float(model_cfg.get("rpn_fg_iou_thresh", 0.7)),
+                rpn_bg_iou_thresh=float(model_cfg.get("rpn_bg_iou_thresh", 0.3)),
+                box_fg_iou_thresh=float(model_cfg.get("roi_fg_iou_thresh", 0.5)),
+                box_bg_iou_thresh=float(model_cfg.get("roi_bg_iou_thresh", 0.5)),
+                rpn_pre_nms_top_n_train=int(model_cfg.get("rpn_pre_nms_top_n_train", 2000)),
+                rpn_post_nms_top_n_train=int(model_cfg.get("rpn_post_nms_top_n_train", 1000)),
+                rpn_pre_nms_top_n_test=int(model_cfg.get("rpn_pre_nms_top_n_test", 1000)),
+                rpn_post_nms_top_n_test=int(model_cfg.get("rpn_post_nms_top_n_test", 500)),
+            )
+            model.roi_heads.score_thresh = float(model_cfg.get("box_score_thresh", 0.0))
+            model.roi_heads.nms_thresh = float(model_cfg.get("box_nms_thresh", 0.5))
+            model.roi_heads.detections_per_img = int(model_cfg.get("box_detections_per_img", 200))
+            return model
+        raise ValueError(f"Unknown model.detector={detector} for backbone={backbone_name}")
     if backbone_name == "retfound_vit_l":
         vit = _load_retfound_vit_l(int(model_cfg.get("input_size", 1024)))
         backbone = RetFoundSimpleFPN(
@@ -150,19 +190,10 @@ def build_detector(cfg: dict) -> FasterRCNN:
         )
         feat_names = ["p2", "p3", "p4", "p5"]
     else:
-        return torchvision.models.detection.fasterrcnn_resnet50_fpn(
-            weights=None,
-            weights_backbone="DEFAULT",
-            num_classes=num_classes,
-            rpn_fg_iou_thresh=float(model_cfg.get("rpn_fg_iou_thresh", 0.7)),
-            rpn_bg_iou_thresh=float(model_cfg.get("rpn_bg_iou_thresh", 0.3)),
-            box_fg_iou_thresh=float(model_cfg.get("roi_fg_iou_thresh", 0.5)),
-            box_bg_iou_thresh=float(model_cfg.get("roi_bg_iou_thresh", 0.5)),
-            rpn_pre_nms_top_n_train=int(model_cfg.get("rpn_pre_nms_top_n_train", 2000)),
-            rpn_post_nms_top_n_train=int(model_cfg.get("rpn_post_nms_top_n_train", 1000)),
-            rpn_pre_nms_top_n_test=int(model_cfg.get("rpn_pre_nms_top_n_test", 1000)),
-            rpn_post_nms_top_n_test=int(model_cfg.get("rpn_post_nms_top_n_test", 500)),
-        )
+        raise ValueError(f"Unknown model.backbone: {backbone_name}")
+
+    if detector != "fasterrcnn":
+        raise ValueError(f"Unknown model.detector={detector} for backbone={backbone_name}")
 
     anchor_sizes = model_cfg.get("anchor_sizes", [[16], [32], [64], [128]])
     aspect_ratios = model_cfg.get("aspect_ratios", [[0.5, 1.0, 2.0]] * 4)
