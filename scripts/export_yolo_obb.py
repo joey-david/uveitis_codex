@@ -98,6 +98,24 @@ def main() -> None:
     ap.add_argument("--coco-val", type=Path, required=True)
     ap.add_argument("--out", type=Path, default=Path("out/yolo_obb/uwf700_global"))
     ap.add_argument("--copy", action="store_true", help="Copy images instead of symlinking (slower, bigger).")
+    ap.add_argument(
+        "--drop-name",
+        action="append",
+        default=[],
+        help="Category name to drop (repeatable). Example: --drop-name vascularite",
+    )
+    ap.add_argument(
+        "--keep-name",
+        action="append",
+        default=[],
+        help="If set, keep only these category names (repeatable). Example: --keep-name vascularite",
+    )
+    ap.add_argument(
+        "--keep-file",
+        type=Path,
+        default=None,
+        help="Optional file with one category name per line (blank lines and '#' comments ignored).",
+    )
     args = ap.parse_args()
 
     coco_train = _read_json(args.coco_train)
@@ -105,8 +123,39 @@ def main() -> None:
     out_root = args.out
     _ensure_dir(out_root)
 
-    cats = coco_train.get("categories", [])
-    names = {i: str(c["name"]) for i, c in enumerate(sorted(cats, key=lambda c: int(c["id"])))}
+    keep = {str(x).strip() for x in args.keep_name if str(x).strip()}
+    if args.keep_file:
+        for line in args.keep_file.read_text(encoding="utf-8").splitlines():
+            s = line.strip()
+            if not s or s.startswith("#"):
+                continue
+            keep.add(s)
+    drop = {str(x).strip() for x in args.drop_name if str(x).strip()}
+    cats_all = sorted(coco_train.get("categories", []), key=lambda c: int(c["id"]))
+    if keep:
+        cats = [c for c in cats_all if str(c.get("name")) in keep]
+    else:
+        cats = [c for c in cats_all if str(c.get("name")) not in drop]
+    keep_ids = {int(c["id"]) for c in cats}
+    if keep:
+        print(f"Keeping only categories: {sorted(keep)}")
+    if drop and not keep:
+        print(f"Dropping categories: {sorted(drop)}")
+    if keep or drop:
+        print(f"Keeping categories: {[str(c['name']) for c in cats]}")
+
+    def _filter(coco: dict) -> dict:
+        if not (keep or drop):
+            return coco
+        out = dict(coco)
+        out["categories"] = [c for c in coco.get("categories", []) if int(c["id"]) in keep_ids]
+        out["annotations"] = [a for a in coco.get("annotations", []) if int(a["category_id"]) in keep_ids]
+        return out
+
+    coco_train = _filter(coco_train)
+    coco_val = _filter(coco_val)
+
+    names = {i: str(c["name"]) for i, c in enumerate(sorted(coco_train.get("categories", []), key=lambda c: int(c["id"])))}
     data_yaml = {
         "path": out_root.as_posix(),
         "train": "images/train",
