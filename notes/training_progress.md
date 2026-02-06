@@ -26,3 +26,5 @@ This file is a running engineering log for training the UWF symptom detector.
 ### 2026-02-06
 
 - Smoke run (`runs/uwf_vitl_smoke/`): 2 epochs on 16-image overfit subset at 512px; ran end-to-end, but `val_mAP_proxy=0.0` (likely too short / needs better score thresholds or longer training).
+- FGADR pretrain run (`runs/fgadr_vitl_1h/`): 12 epochs on a 1200/300 subsample of FGADR tiles at 768px. Best `val_mAP_proxy=0.0143` at epoch 8 (many false positives at default inference threshold).
+- UWF finetune run (`runs/uveitis_from_fgadr_vitl_1h/`): 30 epochs on UWF uveitis tiles (initialized from `runs/fgadr_vitl_1h/checkpoints/best.pth`), best `val_mAP_proxy=0.0215` at epoch 4.
