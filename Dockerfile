@@ -1,6 +1,5 @@
-FROM python:3.10-slim
+FROM pytorch/pytorch:2.5.1-cuda12.1-cudnn9-runtime
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y \
     libgl1 \
     libglib2.0-0 \
@@ -10,15 +9,14 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
-WORKDIR /app
+WORKDIR /workspace
 
-# Install Python dependencies
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
+RUN python -m pip install --no-cache-dir uv
 
-# Copy source code
-COPY . /app
+COPY requirements.txt /workspace/requirements.txt
+RUN uv pip install --system --no-build-isolation -r /workspace/requirements.txt \
+  && rm -rf /root/.cache/uv /root/.cache/pip
 
-# Default command
+COPY . /workspace
+
 CMD ["bash"]

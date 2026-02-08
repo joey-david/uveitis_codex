@@ -1,0 +1,42 @@
+site_name: Uveitis Codex Docs
+repo_name: uveitis_codex
+docs_dir: docs
+nav:
+  - Home: index.md
+  - Structure:
+      - Folder Reference: structure/folder-reference.md
+      - Stage Map: structure/stage-map.md
+      - Docker Runbook: structure/docker-runbook.md
+  - Scripts:
+      - Script Catalog: scripts/index.md
+      - stage0_build_manifest.py: scripts/stage0_build_manifest.md
+      - stage0_preprocess.py: scripts/stage0_preprocess.md
+      - stage0_build_labels.py: scripts/stage0_build_labels.md
+      - train_detector.py: scripts/train_detector.md
+      - infer_detector.py: scripts/infer_detector.md
+      - stage4_continue_mae.py: scripts/stage4_continue_mae.md
+      - stage4_pseudo_label_expand.py: scripts/stage4_pseudo_label_expand.md
+      - build_regular_fundus_color_ref.py: scripts/build_regular_fundus_color_ref.md
+      - qa_preproc_norm_to_regular.py: scripts/qa_preproc_norm_to_regular.md
+      - report_dataset.py: scripts/report_dataset.md
+      - report_preproc.py: scripts/report_preproc.md
+      - report_training.py: scripts/report_training.md
+      - ablate_preproc.py: scripts/ablate_preproc.md
+      - visualize_fundus_masks.py: scripts/visualize_fundus_masks.md
+  - Configs:
+      - Config Catalog: configs/index.md
+  - API:
+      - API Index: api/index.md
+      - common.py: api/common.md
+      - manifest.py: api/manifest.md
+      - preprocess.py: api/preprocess.md
+      - labels.py: api/labels.md
+      - dataset.py: api/dataset.md
+      - modeling.py: api/modeling.md
+      - train.py: api/train.md
+      - infer.py: api/infer.md
+      - reports.py: api/reports.md
+theme:
+  name: mkdocs
+markdown_extensions:
+  - tables

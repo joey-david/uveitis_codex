@@ -9,12 +9,14 @@ datasets/ND_UWFI_dataset/extended_dataset/
 datasets/raw/
 datasets/deepdrid/
 datasets/eyepacs/
-datasets/seg-set/
-datasets/uwf-700/
+datasets/fgadr/
+datasets/uwf-700/*
 !datasets/uwf-700/Labels/
 !datasets/uwf-700/Labels/**
+datasets/uwf-700/Labels/Uveitis/symptom_count.csv
 !datasets/uwf-700/variables.csv
 !datasets/uwf-700/visualize_uveitis_boxes.py
+!datasets/uwf-700/visualize_fundus_masks.py
 
 
 # 1) Ignore everything under datasets
@@ -46,3 +48,18 @@ mtsn_model.pth
 # node_modules
 node_modules/
 package-lock.json
+
+# pipeline-generated artifacts
+eval/
+labels_coco/
+labels_debug/
+manifests/
+preds/
+preds_vis/
+preproc/
+pseudo_labels/
+splits/
+models/sam/*.pth
+site/
+out/
+third_party/

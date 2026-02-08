@@ -1,0 +1,23 @@
+input:
+  manifests:
+    - manifests/uwf700.jsonl
+  split_json: splits/stage0_0.json
+  class_map_yaml: configs/class_map.yaml
+  preproc_root: preproc
+  target_datasets:
+    - uwf700
+  splits:
+    - train
+    - val
+    - test
+
+build:
+  # Not used for UWF OBB labels, but required by schema.
+  min_component_area: 12
+  min_tile_box_ratio: 0.2
+
+output:
+  labels_dir: labels_coco
+  debug_dir: labels_debug
+  debug_max_images: 40
+

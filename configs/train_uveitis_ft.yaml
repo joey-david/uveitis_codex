@@ -1,0 +1,47 @@
+seed: 42
+
+run:
+  output_dir: runs
+  name: uveitis_ft
+  tensorboard: true
+  save_optimizer: false
+  save_epoch_checkpoints: false
+
+data:
+  train_coco: labels_coco/uwf700_train_tiles.json
+  val_coco: labels_coco/uwf700_val_tiles.json
+  resize: 768
+
+model:
+  backbone: retfound_vit_l
+  retfound_ckpt: models/retfound/RETFound_cfp_weights.pth
+  input_size: 768
+  fpn_out_channels: 256
+  freeze_blocks: 20
+  num_classes: 21
+  rpn_fg_iou_thresh: 0.4
+  rpn_bg_iou_thresh: 0.2
+  roi_fg_iou_thresh: 0.4
+  roi_bg_iou_thresh: 0.4
+  rpn_pre_nms_top_n_train: 6000
+  rpn_post_nms_top_n_train: 2500
+  rpn_pre_nms_top_n_test: 2500
+  rpn_post_nms_top_n_test: 1200
+  box_detections_per_img: 400
+
+training:
+  device: cuda
+  init_checkpoint: runs/fgadr_pretrain/checkpoints/best.pth
+  epochs: 40
+  batch_size: 2
+  eval_batch_size: 2
+  num_workers: 4
+  lr: 0.00002
+  min_lr: 0.000001
+  weight_decay: 0.0001
+  freeze_epochs: 10
+  class_balanced_sampling: true
+  eval_iou: 0.3
+  fp_image_targets: [0.25, 0.5, 1.0]
+  amp: true
+  amp_dtype: bf16

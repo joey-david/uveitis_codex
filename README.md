@@ -1,69 +1,192 @@
 # Uveitis Codex
 
-A machine learning project for localization of uveitis symptoms on ultra-wide-field fundus images.
+Pipeline for UWF uveitis lesion localization/classification with a RetFound-adapted Faster R-CNN workflow.
 
-## Datasets
+## Documentation
 
-Expected paths:
-- UWF-700: `datasets/uwf-700/Images/`
-- DeepDRiD UWF: `datasets/deepdrid/ultra-widefield_images/ultra-widefield-training/Images/` and `datasets/deepdrid/ultra-widefield_images/ultra-widefield-validation/Images/`
+- Markdown docs entrypoint: `docs/index.md`
+- Optional rendered docs site (MkDocs):
+  - `pip install -r requirements-docs.txt`
+  - `mkdocs serve`
 
-Download/standardize helpers: `datasets/download_datasets.py`, `datasets/standardize_datasets.py`  
-Details and dataset-specific notes: `datasets/datasets.md`
+## What is implemented
 
-## Stage 1: RETFound MAE Adaptation (UWF)
+- Stage 0 data pipeline:
+  - unified manifest + split builder
+  - retina ROI mask/crop/normalization
+  - global resize + tile export + tile metadata
+  - label harmonization (FGADR mask -> HBB, UWF OBB -> HBB) to COCO
+- Stage 1/2/3 detector scaffold:
+  - YAML-driven training with checkpoints/metrics
+  - RetFound backbone adapter (from `../RETFound`) + FPN + Faster R-CNN
+  - tile inference + merge-to-global + NMS
+- Stage 4 optional hooks:
+  - pseudo-label dataset expansion script
+  - optional RetFound MAE continuation hook (runs if `../RETFound/main_pretrain.py` exists)
+- Bottleneck reports:
+  - dataset/preproc/training/ablation scripts
 
-Prereqs:
-- UWF-700 images: `datasets/uwf-700/Images/`
-- DeepDRiD UWF images: `datasets/deepdrid/ultra-widefield_images/ultra-widefield-training/Images/` and `datasets/deepdrid/ultra-widefield_images/ultra-widefield-validation/Images/`
+## Repository layout (new)
 
-Run these 3 commands in order:
+- `src/uveitis_pipeline/`: core pipeline modules
+- `scripts/`: stage entrypoints
+- `configs/`: YAML configs per stage
+- `manifests/`, `splits/`: ingestion outputs
+- `preproc/`: Stage 0 image artifacts
+- `labels_coco/`, `labels_debug/`: detector labels + debug overlays
+- `runs/`, `preds/`, `preds_vis/`, `eval/`, `pseudo_labels/`: training/inference/eval outputs
 
-1) Authenticate for gated RETFound weights (checkpoint will download into `~/.cache/huggingface/` on first use).
+## Local quickstart
+
 ```bash
-hf auth login
-```
-For faster downloads, `hf_transfer` is included; the scripts enable it automatically when available.
-
-2) Build the unlabeled manifest and run Stage-1 MAE adaptation (outputs `manifests/stage1_unlabeled.jsonl` and `runs/stage1/mae_adapt_last.pth`, `runs/stage1/encoder_adapted.pth`).
-```bash
-python scripts/build_manifest.py unlabeled \
-  --roots datasets/uwf-700/Images \
-          datasets/deepdrid/ultra-widefield_images/ultra-widefield-training/Images \
-          datasets/deepdrid/ultra-widefield_images/ultra-widefield-validation/Images \
-  --output manifests/stage1_unlabeled.jsonl \
-  && python scripts/stage1_adapt_mae.py \
-    --manifest manifests/stage1_unlabeled.jsonl \
-    --output-dir runs/stage1
-```
-
-DDP example (optional, multi-GPU):  
-`torchrun --nproc_per_node=4 scripts/stage1_adapt_mae.py --manifest manifests/stage1_unlabeled.jsonl --output-dir runs/stage1`
-
-3) Build UWF-700 splits and run the before/after linear probe (outputs `manifests/uwf700/*.jsonl`, `manifests/uwf700/labels.json`, `runs/linear_probe/results.json`).
-```bash
-python scripts/build_manifest.py uwf700 --images-dir datasets/uwf-700/Images --out-dir manifests/uwf700 \
-  && python scripts/eval_linear_probe.py \
-    --train manifests/uwf700/train.jsonl \
-    --val manifests/uwf700/val.jsonl \
-    --test manifests/uwf700/test.jsonl \
-    --adapted runs/stage1/encoder_adapted.pth \
-    --output runs/linear_probe/results.json
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-## Docker (GPU training)
-
-Build the image (once):
+Optional (SAM v1 fallback checkpoint):
 ```bash
-docker build -t uveitis-codex:latest .
+mkdir -p models/sam
+wget -O models/sam/sam_vit_h_4b8939.pth https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
 ```
 
-Run an interactive container with GPU access and persistent Hugging Face cache:
+SAM2 is the recommended UWF ROI path; see `docker.md` / docs for the expected checkpoint path under `models/sam2/`.
+
+SAM2-based UWF masking test (interactive):
 ```bash
-docker run --rm -it --gpus all \
-  -v ~/.cache/huggingface:/root/.cache/huggingface \
-  -v "$PWD:/workspace" -w /workspace \
-  uveitis-codex:latest bash
+python datasets/uwf-700/visualize_fundus_masks.py \
+  --images datasets/uwf-700/Images/Uveitis \
+  --config configs/stage0_preprocess.yaml \
+  --max-images 100
 ```
 
-Inside the container, run the same 3 commands above. Manifests go to `manifests/`, and checkpoints/results to `runs/`.
+## End-to-end command flow
+
+### 0. Build manifests + split file
+
+```bash
+python scripts/stage0_build_manifest.py --config configs/stage0_manifest.yaml
+```
+
+Expected stdout:
+- `Wrote manifests to manifests`
+- `Wrote split file to splits/stage0_0.json`
+- per-dataset counts (split + label types + classes)
+
+Output files:
+- `manifests/{dataset}.jsonl`
+- `manifests/{dataset}.csv`
+- `splits/stage0_0.json`
+
+### 1. Run preprocessing (ROI/crop/normalize/tile)
+
+If using reference-based normalization (`normalize.method: reinhard_lab_ref`), build the regular-fundus reference first:
+
+```bash
+python scripts/build_regular_fundus_color_ref.py \
+  --config configs/stage0_preprocess.yaml \
+  --per-dataset 50 \
+  --out preproc/ref/regular_fundus_color_stats.json
+```
+
+```bash
+python scripts/stage0_preprocess.py --config configs/stage0_preprocess.yaml
+```
+
+Expected stdout:
+- `Preprocessing complete`
+- metrics dict with ROI fail rates, tile distribution, reconstruction error
+
+Output files:
+- `preproc/roi_masks/{image_id}.png`
+- `preproc/crops/{image_id}.png`
+- `preproc/crop_meta/{image_id}.json`
+- `preproc/norm/{image_id}.png`
+- `preproc/norm_meta/{image_id}.json`
+- `preproc/global_1024/{image_id}.png`
+- `preproc/tiles/{image_id}/{tile_id}.png`
+- `preproc/tiles_meta/{image_id}.json`
+- `preproc/verify/*.png`, `preproc/verify/preprocess_metrics.json`
+
+### 2. Build COCO labels for detector training
+
+```bash
+python scripts/stage0_build_labels.py --config configs/stage0_labels.yaml
+```
+
+Expected stdout:
+- per-dataset/per-split COCO summaries (`num_images`, `num_annotations`, class counts)
+
+Output files:
+- `labels_coco/{dataset}_{split}.json`
+- `labels_coco/{dataset}_{split}_tiles.json`
+- `labels_coco/summary.json`
+- `labels_debug/{dataset}_{split}/*.png`
+
+### 3. Overfit smoke checkpoint (10 images)
+
+```bash
+python scripts/train_detector.py --config configs/train_overfit10.yaml
+```
+
+Output files:
+- `runs/overfit_10/config.yaml`
+- `runs/overfit_10/checkpoints/epoch_*.pth`
+- `runs/overfit_10/checkpoints/best.pth`
+- `runs/overfit_10/metrics.jsonl`
+- `runs/overfit_10/val_report.json`
+
+### 4. FGADR pretrain
+
+```bash
+python scripts/train_detector.py --config configs/train_fgadr.yaml
+```
+
+Output files:
+- `runs/fgadr_pretrain/...`
+
+### 5. Uveitis fine-tune (lax-box settings)
+
+```bash
+python scripts/train_detector.py --config configs/train_uveitis_ft.yaml
+```
+
+Output files:
+- `runs/uveitis_ft/...`
+- `runs/uveitis_ft/val_report.json` (includes sensitivity @ FP/image)
+
+### 6. Tile inference + global merge
+
+```bash
+python scripts/infer_detector.py --config configs/infer_uveitis_ft.yaml
+```
+
+Output files:
+- `preds/uveitis_ft/{image_id}.json`
+- `preds_vis/uveitis_ft/{image_id}.png`
+
+### 7. Reports / ablations
+
+```bash
+python scripts/report_dataset.py --manifests manifests/uwf700.jsonl manifests/fgadr.jsonl --cocos labels_coco/uwf700_train.json labels_coco/uwf700_train_tiles.json --out eval/report_dataset.json
+python scripts/report_preproc.py --manifest manifests/uwf700.jsonl --preproc-root preproc --out-dir eval/preproc
+python scripts/report_training.py --run-dir runs/uveitis_ft --out-json eval/training_report.json --out-png eval/training_curves.png
+python scripts/ablate_preproc.py --pred-a preds/uveitis_ft --pred-b preds/uveitis_ft_no_norm --out eval/ablate_preproc.json
+```
+
+### 8. Optional scripts
+
+```bash
+python scripts/stage4_continue_mae.py --retfound-dir ../RETFound --data-path preproc/global_1024
+python scripts/stage4_pseudo_label_expand.py --base-coco labels_coco/uwf700_train_tiles.json --pred-dir preds/uveitis_ft --out-coco pseudo_labels/uveitis_ft/train_plus_pseudo.json
+```
+
+## RetFound integration notes
+
+- `src/uveitis_pipeline/modeling.py` loads RetFound code from `../RETFound`.
+- If you have checkpoint weights, set `model.retfound_ckpt` in training/inference YAML.
+- If no RetFound checkpoint is supplied, code still runs (backbone init path remains valid).
+
+## Docker
+
+Use `docker.md` for full remote A100 flow (build/run/train/evaluate) with expected outputs and artifact locations.

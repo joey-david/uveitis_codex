@@ -1,0 +1,58 @@
+seed: 42
+
+run:
+  output_dir: runs
+  name: fgadr_vitl_anchorfix_smoke2
+  tensorboard: true
+  save_optimizer: false
+  save_epoch_checkpoints: false
+
+data:
+  train_coco: labels_coco/fgadr_train_tiles.json
+  val_coco: labels_coco/fgadr_val_tiles.json
+  resize: 768
+
+model:
+  backbone: retfound_vit_l
+  retfound_ckpt: models/retfound/RETFound_cfp_weights.pth
+  input_size: 768
+  fpn_out_channels: 256
+  freeze_blocks: 18
+  num_classes: 21
+
+  # FGADR lesions are extremely small on 768 tiles: most boxes have min side <16px.
+  # Use more anchor scales on p2/p3 to improve RPN matching and learning signal.
+  # Keep the same number of anchors per location on each FPN level (3 sizes x 3 ratios),
+  # otherwise torchvision's default RPNHead will not match the anchor generator.
+  anchor_sizes: [[4, 8, 16], [16, 32, 64], [64, 128, 256], [128, 256, 512]]
+  aspect_ratios: [[0.5, 1.0, 2.0], [0.5, 1.0, 2.0], [0.5, 1.0, 2.0], [0.5, 1.0, 2.0]]
+
+  rpn_fg_iou_thresh: 0.4
+  rpn_bg_iou_thresh: 0.2
+  roi_fg_iou_thresh: 0.4
+  roi_bg_iou_thresh: 0.4
+
+  rpn_pre_nms_top_n_train: 4000
+  rpn_post_nms_top_n_train: 2000
+  rpn_pre_nms_top_n_test: 2000
+  rpn_post_nms_top_n_test: 1000
+  box_detections_per_img: 400
+
+training:
+  device: cuda
+  epochs: 8
+  batch_size: 2
+  eval_batch_size: 2
+  num_workers: 4
+  lr: 0.00005
+  min_lr: 0.000001
+  weight_decay: 0.0001
+  freeze_epochs: 3
+  max_train_images: 300
+  max_val_images: 120
+  class_balanced_sampling: false
+  eval_iou: 0.3
+  eval_score_thresh: 0.1
+  fp_image_targets: [0.5, 1.0, 2.0]
+  amp: true
+  amp_dtype: bf16

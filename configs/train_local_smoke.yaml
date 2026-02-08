@@ -1,0 +1,31 @@
+seed: 42
+
+run:
+  output_dir: runs
+  name: local_smoke_detector
+  tensorboard: false
+  wandb: false
+
+data:
+  train_coco: labels_coco/uwf700_train_tiles.json
+  val_coco: labels_coco/uwf700_train_tiles.json
+  resize: 512
+
+model:
+  backbone: resnet50_fpn
+  num_classes: 21
+
+training:
+  device: cpu
+  epochs: 1
+  batch_size: 2
+  eval_batch_size: 2
+  num_workers: 0
+  lr: 0.0001
+  min_lr: 0.000001
+  weight_decay: 0.0001
+  freeze_epochs: 0
+  overfit_num_images: 4
+  class_balanced_sampling: false
+  eval_iou: 0.3
+  fp_image_targets: [0.5, 1.0]

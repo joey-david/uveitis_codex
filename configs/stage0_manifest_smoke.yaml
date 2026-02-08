@@ -1,0 +1,26 @@
+seed: 42
+fold: 0
+read_image_size: false
+split_ratios:
+  train: 0.7
+  val: 0.15
+  test: 0.15
+
+datasets:
+  uwf700:
+    enabled: true
+    root: datasets/uwf-700
+  fgadr:
+    enabled: true
+    root: datasets/fgadr
+  deepdrid:
+    enabled: false
+    root: datasets/deepdrid
+  eyepacs:
+    enabled: false
+    root: datasets/eyepacs
+
+output:
+  manifest_dir: manifests
+  split_dir: splits
+  exp_name: stage0

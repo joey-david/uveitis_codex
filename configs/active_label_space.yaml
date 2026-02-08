@@ -1,0 +1,27 @@
+## Active label-space policy (do not drift without re-evaluating sparsity).
+##
+## Requirement (user): do NOT train/infer all 20/19 classes.
+## Main detector classes = (classes present in FGADR) + (top-6 most frequent in UWF-700/Uveitis),
+## with `vascularite` handled by a dedicated model/module.
+##
+## Source stats: labels_coco/summary.json (tiles split, train)
+## - FGADR present: exudats, hemorragie, macroanevrisme_arteriel, ischemie_retine, vascularite
+## - UWF-700 top-6 (excluding vascularite): nodule_choroidien, hyalite, hemorragie, foyer_choroidien,
+##   granulome_choroidien, oedeme_papillaire
+
+vascularite:
+  separate_model: true
+  class_name: vascularite
+
+main_detector:
+  # Excludes `vascularite` (separate model).
+  class_names:
+    - exudats
+    - hemorragie
+    - macroanevrisme_arteriel
+    - ischemie_retine
+    - nodule_choroidien
+    - hyalite
+    - foyer_choroidien
+    - granulome_choroidien
+    - oedeme_papillaire

@@ -5,22 +5,18 @@ kaggle
 gdown
 pandas
 numpy
+pyyaml
+matplotlib
+Pillow
 
 # Deep Learning & Computer Vision
-torch
-torchvision
+# NOTE: torch/torchvision are provided by the Docker base image (CUDA-enabled).
+# Keeping them out of pip/uv requirements avoids downloading a different CUDA stack.
 opencv-python
 scikit-learn
 timm
-huggingface_hub
-hf_transfer
+tensorboard
+wandb
 pytest
-
-# MMRotate Stack (Install order matters generally, use mimicking for pip)
-# These often require matching CUDA versions.
-# Suggest installing via mim if possible, but listing here for reference.
-openmim
-mmengine
-mmcv
-mmdet
-mmrotate
+git+https://github.com/facebookresearch/sam2.git
+ultralytics

@@ -1,0 +1,7 @@
+- 2026-02-05T23:36:17+01:00 Cleaned eval/: kept eval/triptych.png + eval/sam2_fundus_qa_uveitis10; moved other eval outputs to /tmp/eval_archive_20260205_233604
+- 2026-02-05T23:53:44+01:00 Built UWF700 Uveitis(100) label stage: preprocessed 100 images (SAM2 ROI + color norm -> preproc/global_1024 + tiles), generated COCO labels in labels_coco/ and overlays in labels_debug/, and wrote 4 raw-vs-postproc preview composites + montage at eval/uwf700_uveitis_label_transfer_previews/montage_2x2.png
+- 2026-02-06T01:36:53+01:00 Created commits and ran training: set up RETFound (vendor + weights), preprocessed FGADR (1842), rebuilt COCO labels (FGADR+UWF), trained runs fgadr_vitl_1h and uveitis_from_fgadr_vitl_1h with curves in runs/*/curves.png, generated inference previews in preds_vis/uveitis_from_fgadr_vitl_1h_preview
+
+- 2026-02-06T12:30:15+01:00 diagnostics: added real AP evaluator, compared RETFound vs R50 on FGADR (small objects), tried RetinaNet (failed), added notes/model_diagnostics.md
+- 2026-02-06T14:39:00+01:00 label-space: wrote down reduced-class policy (FGADR-present + top-6 UWF, vascularite separate) in configs/active_label_space.yaml + configs/main_detector_classes.txt + docs/structure/label_space.md; started main detector training with UWF oversampling to reduce domain dominance.
+- 2026-02-06T17:33:16+01:00 cleanup: pruned eval/ to (triptych + sam2 QA), removed old runs/obb checkpoints, removed preproc intermediates (crops/tiles), preserved best weights in out/weights
