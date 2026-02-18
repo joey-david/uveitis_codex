@@ -11,6 +11,38 @@ import yaml
 from ultralytics import YOLO
 
 
+def _poly_area(poly: np.ndarray) -> float:
+    return float(abs(cv2.contourArea(poly.astype(np.float32))))
+
+
+def _poly_iou(a: np.ndarray, b: np.ndarray) -> float:
+    a = a.astype(np.float32)
+    b = b.astype(np.float32)
+    inter_area, _ = cv2.intersectConvexConvex(a, b)
+    if inter_area <= 0:
+        return 0.0
+    ua = _poly_area(a) + _poly_area(b) - float(inter_area)
+    return float(inter_area) / ua if ua > 0 else 0.0
+
+
+def _nms_polys(polys: np.ndarray, scores: np.ndarray, iou: float) -> list[int]:
+    if polys.shape[0] == 0:
+        return []
+    if iou <= 0:
+        return list(range(polys.shape[0]))
+    order = np.argsort(-scores)
+    keep: list[int] = []
+    for idx in order.tolist():
+        ok = True
+        for j in keep:
+            if _poly_iou(polys[idx], polys[j]) > iou:
+                ok = False
+                break
+        if ok:
+            keep.append(idx)
+    return keep
+
+
 def _read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -83,7 +115,9 @@ def main() -> None:
     ap.add_argument("--n", type=int, default=6)
     ap.add_argument("--imgsz", type=int, default=1280)
     ap.add_argument("--conf", type=float, default=0.05)
+    ap.add_argument("--tile-iou", type=float, default=0.7, help="YOLO per-tile NMS IoU.")
     ap.add_argument("--max-det", type=int, default=200)
+    ap.add_argument("--global-nms-iou", type=float, default=0.3, help="Global polygon NMS IoU across tiles (<=0 disables).")
     ap.add_argument("--class-map", type=Path, default=Path("configs/class_map.yaml"))
     ap.add_argument("--data-yaml", type=Path, default=None, help="If set, read class names from this YOLO data.yaml.")
     ap.add_argument("--out-dir", type=Path, default=Path("eval/yolo_obb_previews"))
@@ -103,9 +137,8 @@ def main() -> None:
     for image_id in image_ids:
         img_id = image_id.replace("::", "__")
         global_path = Path("preproc/global_1024") / f"{img_id}.png"
-        tiles_dir = Path("preproc/tiles") / img_id
         meta_path = Path("preproc/tiles_meta") / f"{img_id}.json"
-        if not global_path.exists() or not tiles_dir.exists() or not meta_path.exists():
+        if not global_path.exists() or not meta_path.exists():
             continue
 
         meta = _read_json(meta_path)
@@ -113,17 +146,19 @@ def main() -> None:
         if global_bgr is None:
             continue
 
-        # Predict per-tile and project to global by adding tile offsets.
-        total = 0
+        # Predict per-tile and project to global by adding tile offsets, then global NMS.
+        all_xy = []
+        all_cls = []
+        all_conf = []
         for t in meta["tiles"]:
             tile_id = t["tile_id"]
-            tile_path = tiles_dir / f"{tile_id}.png"
-            if not tile_path.exists():
-                continue
+            x0, y0, x1, y1 = int(t["x0"]), int(t["y0"]), int(t["x1"]), int(t["y1"])
+            tile_bgr = global_bgr[y0:y1, x0:x1]
             res = model.predict(
-                source=str(tile_path),
+                source=tile_bgr,
                 imgsz=args.imgsz,
                 conf=args.conf,
+                iou=args.tile_iou,
                 device=0,
                 verbose=False,
                 max_det=args.max_det,
@@ -136,30 +171,46 @@ def main() -> None:
             cls = r.obb.cls.cpu().numpy().astype(int)
             conf = r.obb.conf.cpu().numpy()
 
-            x0, y0 = float(t["x0"]), float(t["y0"])
             for i in range(xy.shape[0]):
                 pts = xy[i].copy()
-                pts[:, 0] += x0
-                pts[:, 1] += y0
-                c = _label_color(cls[i])
-                _draw_poly(global_bgr, pts, c, thickness=2)
-                # Put label near first point.
-                p0 = pts[0]
-                label = names[cls[i]] if 0 <= cls[i] < len(names) else str(cls[i])
-                txt = f"{label} {conf[i]:.2f}"
-                cv2.putText(
-                    global_bgr,
-                    txt,
-                    (int(p0[0]), int(max(12, p0[1]))),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.6,
-                    c,
-                    2,
-                    lineType=cv2.LINE_AA,
-                )
-                total += 1
+                pts[:, 0] += float(x0)
+                pts[:, 1] += float(y0)
+                all_xy.append(pts)
+                all_cls.append(cls[i])
+                all_conf.append(conf[i])
 
-        out_path = out_dir / f"{img_id}__preds{total}.png"
+        if not all_xy:
+            continue
+
+        all_xy = np.stack(all_xy, axis=0).astype(np.float32)
+        all_cls = np.asarray(all_cls, dtype=np.int32)
+        all_conf = np.asarray(all_conf, dtype=np.float32)
+
+        keep = []
+        for c in sorted(set(all_cls.tolist())):
+            idx = np.where(all_cls == c)[0]
+            k = _nms_polys(all_xy[idx], all_conf[idx], args.global_nms_iou)
+            keep.extend(idx[k].tolist())
+        keep = sorted(keep, key=lambda i: float(all_conf[i]), reverse=True)
+
+        for i in keep:
+            pts = all_xy[i]
+            c = _label_color(int(all_cls[i]))
+            _draw_poly(global_bgr, pts, c, thickness=2)
+            label = names[int(all_cls[i])] if 0 <= int(all_cls[i]) < len(names) else str(int(all_cls[i]))
+            p0 = pts[0]
+            cv2.putText(
+                global_bgr,
+                f"{label} {float(all_conf[i]):.2f}",
+                (int(p0[0]), int(max(12, p0[1]))),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                c,
+                2,
+                lineType=cv2.LINE_AA,
+            )
+
+        out_path = out_dir / f"{img_id}__preds{len(keep)}_raw{all_xy.shape[0]}.png"
         cv2.imwrite(str(out_path), global_bgr)
         kept += 1
         if kept >= args.n:

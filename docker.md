@@ -330,6 +330,57 @@ Produces:
 Expect:
 - val report includes per-class sensitivity at configured FP/image targets
 
+### Stage 3.2 (optional) — YOLOv8-OBB track (fast OBB iteration + previews)
+
+Export a YOLOv8-OBB dataset from our COCO tile labels (Main9 label space):
+
+```bash
+python scripts/export_yolo_obb.py \
+  --coco-train labels_coco/uwf700_train_tiles.json \
+  --coco-val labels_coco/uwf700_val_tiles.json \
+  --out out/yolo_obb/uwf700_tiles_main9 \
+  --keep-file configs/main_detector_classes.txt
+```
+
+Train YOLOv8-OBB:
+
+```bash
+python scripts/train_yolo_obb.py \
+  --model yolov8m-obb.pt \
+  --data out/yolo_obb/uwf700_tiles_main9/data.yaml \
+  --imgsz 1280 \
+  --epochs 30 \
+  --batch 8 \
+  --name uwf700_tiles_main9
+```
+
+Preview predictions projected back to global UWF images (with an additional global polygon NMS across tiles to reduce seam duplicates):
+
+```bash
+python scripts/qa_yolo_obb_uwf_previews.py \
+  --weights out/weights/yolo_obb_main9_best.pt \
+  --split val \
+  --n 12 \
+  --conf 0.05 \
+  --tile-iou 0.7 \
+  --global-nms-iou 0.3 \
+  --out-dir eval/yolo_obb_previews
+```
+
+Combined main + vascularite preview overlays:
+
+```bash
+python scripts/qa_yolo_obb_uwf_previews_combined.py \
+  --weights-main out/weights/yolo_obb_main9_best.pt \
+  --weights-vascularite out/weights/yolo_obb_vascularite_best.pt \
+  --split val \
+  --n 12 \
+  --conf-main 0.05 \
+  --conf-vascularite 0.05 \
+  --global-nms-iou 0.3 \
+  --out-dir eval/yolo_obb_previews_combined
+```
+
 ### Stage 4.A (optional) — Continue MAE pretraining
 
 ```bash

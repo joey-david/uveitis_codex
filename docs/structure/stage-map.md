@@ -58,6 +58,25 @@ For command-by-command Docker execution details (including substage inputs/outpu
   - `preds/<exp_name>/*.json`
   - `preds_vis/<exp_name>/*.png`
 
+## Optional: YOLOv8-OBB track (fast iteration on OBB labels)
+
+This is an optional parallel track for quick OBB experiments and qualitative previews.
+
+1. Export COCO tiles to YOLOv8-OBB dataset:
+Script `scripts/export_yolo_obb.py` writes `out/yolo_obb/<name>/...`.
+2. Train YOLOv8-OBB:
+Script `scripts/train_yolo_obb.py` writes `runs/yolo_obb/<name>/...`.
+3. Preview predictions on global images:
+Script `scripts/qa_yolo_obb_uwf_previews.py` writes overlays under `eval/` and runs a global polygon NMS across tiles to reduce seam duplicates.
+
+## Label space policy
+
+We intentionally do not train/infer all uveitis classes at once:
+- Main detector predicts FGADR-present classes plus the top UWF-700/Uveitis classes (Main9).
+- `vascularite` is excluded from the main detector and handled separately.
+
+See: `label_space.md` and `configs/active_label_space.yaml`.
+
 ## Stage 4 (optional hooks)
 
 - MAE continuation hook: [`scripts/stage4_continue_mae.py`](../scripts/stage4_continue_mae.md)

@@ -10,4 +10,5 @@ Core pipeline modules in `src/uveitis_pipeline/`.
 6. [`modeling.py`](modeling.md)
 7. [`train.py`](train.md)
 8. [`infer.py`](infer.md)
-9. [`reports.py`](reports.md)
+9. [`vascularite.py`](vascularite.md)
+10. [`reports.py`](reports.md)

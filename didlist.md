@@ -5,3 +5,4 @@
 - 2026-02-06T12:30:15+01:00 diagnostics: added real AP evaluator, compared RETFound vs R50 on FGADR (small objects), tried RetinaNet (failed), added notes/model_diagnostics.md
 - 2026-02-06T14:39:00+01:00 label-space: wrote down reduced-class policy (FGADR-present + top-6 UWF, vascularite separate) in configs/active_label_space.yaml + configs/main_detector_classes.txt + docs/structure/label_space.md; started main detector training with UWF oversampling to reduce domain dominance.
 - 2026-02-06T17:33:16+01:00 cleanup: pruned eval/ to (triptych + sam2 QA), removed old runs/obb checkpoints, removed preproc intermediates (crops/tiles), preserved best weights in out/weights
+- 2026-02-06T21:40:01+01:00 docs: updated mkdocs + docker runbook for YOLOv8-OBB tooling, label-space policy, and vascularite module; added script/API doc pages; referenced bundled contrastive paper

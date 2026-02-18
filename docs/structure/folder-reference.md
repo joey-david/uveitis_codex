@@ -50,6 +50,14 @@ This page documents the main folders used by the implemented pipeline.
 | `eval/preproc_norm_qa_*` | Preprocessing QA bundles (mask, crop, norm, tiles) on small UWF samples. | `scripts/qa_preproc_norm_to_regular.py` |
 | `pseudo_labels/` | Pseudo-expanded COCO datasets. | `scripts/stage4_pseudo_label_expand.py` |
 
+## YOLOv8-OBB outputs (optional)
+
+| Folder | Purpose | Producer |
+|---|---|---|
+| `out/yolo_obb/` | YOLO dataset exports (`data.yaml`, `images/*`, `labels/*`) created from COCO. | `scripts/export_yolo_obb.py` |
+| `runs/yolo_obb/` | Ultralytics training runs (checkpoints, logs). | `scripts/train_yolo_obb.py` |
+| `eval/yolo_obb_previews*/` | Qualitative overlay previews (tile inference projected to global + global polygon NMS). | `scripts/qa_yolo_obb_uwf_previews*.py` |
+
 ## Documentation
 
 | Folder | Purpose |

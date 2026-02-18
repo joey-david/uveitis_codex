@@ -74,6 +74,11 @@ Start here:
 5. [Config Catalog](configs/index.md)
 6. [API Reference](api/index.md)
 
+## Included Reference Paper
+
+This repo also vendors a relevant contrastive UWF/fundus paper PDF for offline reading:
+- `nature_vit_cnn_dr_localization.pdf`
+
 How to use this as a newcomer:
 1. Read [Stage Map](structure/stage-map.md) for the full flow.
 2. Run one stage script from [Script Catalog](scripts/index.md).

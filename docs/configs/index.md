@@ -78,6 +78,16 @@ Key schema:
 - `maps.uwf700.<int_class_id>`: category name mapping for OBB labels.
 - `maps.fgadr.<mask_folder_name>`: category name mapping for FGADR mask folders.
 
+## Active label space (policy)
+
+Files:
+- `configs/active_label_space.yaml` (human-readable policy and rationale)
+- `configs/main_detector_classes.txt` (one class name per line; used by YOLO export tooling)
+
+Notes:
+- The main detector excludes `vascularite` (separate module/model).
+- This is the canonical "do not drift" list used for Main9 experiments.
+
 ## Stage0 label building
 
 Files:

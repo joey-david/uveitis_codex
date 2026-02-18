@@ -7,6 +7,7 @@ nav:
       - Folder Reference: structure/folder-reference.md
       - Stage Map: structure/stage-map.md
       - Docker Runbook: structure/docker-runbook.md
+      - Label Space: structure/label_space.md
   - Scripts:
       - Script Catalog: scripts/index.md
       - stage0_build_manifest.py: scripts/stage0_build_manifest.md
@@ -18,6 +19,15 @@ nav:
       - stage4_pseudo_label_expand.py: scripts/stage4_pseudo_label_expand.md
       - build_regular_fundus_color_ref.py: scripts/build_regular_fundus_color_ref.md
       - qa_preproc_norm_to_regular.py: scripts/qa_preproc_norm_to_regular.md
+      - eval_detector_ap.py: scripts/eval_detector_ap.md
+      - export_yolo_obb.py: scripts/export_yolo_obb.md
+      - train_yolo_obb.py: scripts/train_yolo_obb.md
+      - qa_yolo_obb_uwf_previews.py: scripts/qa_yolo_obb_uwf_previews.md
+      - qa_yolo_obb_uwf_previews_combined.py: scripts/qa_yolo_obb_uwf_previews_combined.md
+      - make_yolo_mix.py: scripts/make_yolo_mix.md
+      - merge_yolo_datasets.py: scripts/merge_yolo_datasets.md
+      - filter_yolo_dataset.py: scripts/filter_yolo_dataset.md
+      - vascularite: scripts/vascularite.md
       - report_dataset.py: scripts/report_dataset.md
       - report_preproc.py: scripts/report_preproc.md
       - report_training.py: scripts/report_training.md
@@ -35,6 +45,7 @@ nav:
       - modeling.py: api/modeling.md
       - train.py: api/train.md
       - infer.py: api/infer.md
+      - vascularite.py: api/vascularite.md
       - reports.py: api/reports.md
 theme:
   name: mkdocs

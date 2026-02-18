@@ -13,6 +13,7 @@ Each page documents one executable in `scripts/`.
 7. [`stage4_pseudo_label_expand.py`](stage4_pseudo_label_expand.md)
 8. [`build_regular_fundus_color_ref.py`](build_regular_fundus_color_ref.md)
 9. [`qa_preproc_norm_to_regular.py`](qa_preproc_norm_to_regular.md)
+10. [`eval_detector_ap.py`](eval_detector_ap.md)
 
 ## Reporting scripts
 
@@ -21,6 +22,19 @@ Each page documents one executable in `scripts/`.
 3. [`report_training.py`](report_training.md)
 4. [`ablate_preproc.py`](ablate_preproc.md)
 
+## YOLOv8-OBB tooling (optional)
+
+1. [`export_yolo_obb.py`](export_yolo_obb.md)
+2. [`train_yolo_obb.py`](train_yolo_obb.md)
+3. [`qa_yolo_obb_uwf_previews.py`](qa_yolo_obb_uwf_previews.md)
+4. [`qa_yolo_obb_uwf_previews_combined.py`](qa_yolo_obb_uwf_previews_combined.md)
+5. [`make_yolo_mix.py`](make_yolo_mix.md)
+6. [`merge_yolo_datasets.py`](merge_yolo_datasets.md)
+7. [`filter_yolo_dataset.py`](filter_yolo_dataset.md)
+
+## Vascularite (separate module)
+
+1. [`scripts/vascularite/*`](vascularite.md)
 
 ## Dataset utility scripts
 
