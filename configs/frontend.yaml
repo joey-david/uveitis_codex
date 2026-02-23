@@ -1,0 +1,17 @@
+pipeline:
+  infer_config: configs/infer_uveitis_ft.yaml
+  preprocess_config: configs/stage0_preprocess.yaml
+  dataset_for_roi: uwf700
+
+frontend:
+  mode: local
+  remote_api_url: http://localhost:8000
+  remote_timeout_sec: 180
+  artifact_root: out/frontend
+  save_artifacts: true
+
+runtime:
+  device: auto
+  detector_input_size: 768
+  score_thresh: 0.30
+  nms_iou: 0.50
