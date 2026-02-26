@@ -1,0 +1,24 @@
+model:
+  checkpoint: runs/retfound_mask/main9_maskfirst/best.pt
+  vendor_dir: third_party/RETFound_MAE
+  retfound_ckpt: models/retfound/RETFound_cfp_weights.pth
+  class_map_active: labels_native/class_map_active.json
+  image_size: 1024
+  decoder_channels: 256
+
+data:
+  index_jsonl: labels_native/uwf700_val_global.jsonl
+  max_images: 0
+
+postprocess:
+  threshold: 0.45
+  thresholds_json: ""
+  min_area_px: 24
+  open_kernel: 0
+  close_kernel: 3
+  polygon_simplify_eps: 1.25
+  nms_iou: 0.3
+
+output:
+  out_dir: eval/mask_to_obb_preds
+  preview_n: 20

@@ -1,0 +1,18 @@
+model:
+  checkpoint: runs/retfound_mask/main9_iterF/best.pt
+  vendor_dir: third_party/RETFound_MAE
+  retfound_ckpt: models/retfound/RETFound_cfp_weights.pth
+  class_map_active: labels_native_main9_fastiter/class_map_active.json
+  image_size: 896
+  decoder_channels: 192
+
+data:
+  val_index: labels_native_main9_fastiter/uwf700_val_global.jsonl
+  max_images: 0
+
+search:
+  thresholds: [0.08, 0.12, 0.16, 0.20, 0.24, 0.28, 0.32]
+  absent_class_threshold: 0.95
+
+output:
+  thresholds_json: runs/retfound_mask/main9_iterF/calibrated_thresholds.json

@@ -1,0 +1,76 @@
+{
+  "iou_threshold": 0.5,
+  "score_threshold": 0.0,
+  "map50": 0.2739273927392739,
+  "map50_all_classes": 0.22827282728272827,
+  "macro_f1": 0.05483546264034069,
+  "macro_f1_all_classes": 0.04569621886695058,
+  "per_class": {
+    "foyer_choroidien": {
+      "n_gt": 1,
+      "n_pred": 13,
+      "tp": 0,
+      "fp": 13,
+      "fn": 1,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "ap50": 0.0
+    },
+    "granulome_choroidien": {
+      "n_gt": 2,
+      "n_pred": 26,
+      "tp": 0,
+      "fp": 26,
+      "fn": 2,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "ap50": 0.0
+    },
+    "hemorragie": {
+      "n_gt": 0,
+      "n_pred": 9,
+      "tp": 0,
+      "fp": 9,
+      "fn": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "ap50": 0.0
+    },
+    "hyalite": {
+      "n_gt": 12,
+      "n_pred": 29,
+      "tp": 1,
+      "fp": 28,
+      "fn": 11,
+      "precision": 0.034482758620689655,
+      "recall": 0.08333333333333333,
+      "f1": 0.04878048780487805,
+      "ap50": 0.0891089108910891
+    },
+    "nodule_choroidien": {
+      "n_gt": 6,
+      "n_pred": 29,
+      "tp": 2,
+      "fp": 27,
+      "fn": 4,
+      "precision": 0.06896551724137931,
+      "recall": 0.3333333333333333,
+      "f1": 0.1142857142857143,
+      "ap50": 0.2805280528052807
+    },
+    "oedeme_papillaire": {
+      "n_gt": 1,
+      "n_pred": 17,
+      "tp": 1,
+      "fp": 16,
+      "fn": 0,
+      "precision": 0.058823529411764705,
+      "recall": 1.0,
+      "f1": 0.1111111111111111,
+      "ap50": 1.0
+    }
+  }
+}

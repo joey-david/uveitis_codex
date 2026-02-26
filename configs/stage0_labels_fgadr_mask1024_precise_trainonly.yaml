@@ -1,0 +1,21 @@
+input:
+  manifests:
+    - manifests/fgadr_preproc1273.jsonl
+  split_json: splits/stage0_0.json
+  class_map_yaml: configs/class_map.yaml
+  preproc_root: preproc_fgadr_mask1024
+  target_datasets:
+    - fgadr
+  splits:
+    - train
+
+build:
+  min_component_area: 10
+  min_tile_box_ratio: 0.10
+  fgadr_mask_to_obb: true
+  tile_require_obb_for_obb_sources: true
+
+output:
+  labels_dir: labels_coco_fgadr_mask1024_precise_trainonly
+  debug_dir: labels_debug_fgadr_mask1024_precise_trainonly
+  debug_max_images: 0

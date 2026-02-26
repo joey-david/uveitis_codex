@@ -19,7 +19,7 @@ if [[ ! -f "$WEIGHTS" ]]; then
       "https://drive.usercontent.google.com/download?id=1l62zbWUFTlp214SvK6eMwPQZAzcwoeBE&export=download&confirm=t"
   fi
 
-  docker compose run --rm train python - <<'PY'
+  python3 - <<'PY'
 from pathlib import Path
 import torch
 

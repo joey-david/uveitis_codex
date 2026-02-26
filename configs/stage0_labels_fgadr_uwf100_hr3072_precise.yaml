@@ -1,0 +1,25 @@
+input:
+  manifests:
+    - manifests/uwf700_uveitis100.jsonl
+    - manifests/fgadr.jsonl
+  split_json: splits/stage0_0.json
+  class_map_yaml: configs/class_map.yaml
+  preproc_root: preproc_fgadr_uwf100_hr3072
+  target_datasets:
+    - fgadr
+    - uwf700
+  splits:
+    - train
+    - val
+    - test
+
+build:
+  min_component_area: 10
+  min_tile_box_ratio: 0.15
+  fgadr_mask_to_obb: true
+  tile_require_obb_for_obb_sources: true
+
+output:
+  labels_dir: labels_coco_fgadr_uwf100_hr3072_precise
+  debug_dir: labels_debug_fgadr_uwf100_hr3072_precise
+  debug_max_images: 60

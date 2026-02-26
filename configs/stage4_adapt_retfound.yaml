@@ -1,0 +1,35 @@
+seed: 42
+
+run:
+  output_dir: runs/retfound_adapt
+  name: main9_contrastive
+
+data:
+  manifests:
+    - manifests/fgadr.jsonl
+    - manifests/uwf700.jsonl
+  split_json: splits/stage0_0.json
+  splits: [train]
+  datasets:
+    - fgadr
+    - uwf700
+  preproc_root: preproc
+  image_subdir: norm
+  max_images: 0
+
+model:
+  vendor_dir: third_party/RETFound_MAE
+  retfound_ckpt: models/retfound/RETFound_cfp_weights.pth
+  input_size: 224
+  proj_dim: 256
+
+train:
+  device: cuda
+  epochs: 20
+  batch_size: 32
+  num_workers: 8
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+  temperature: 0.2
+  freeze_blocks: 8
+  amp: true

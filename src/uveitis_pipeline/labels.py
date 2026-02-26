@@ -20,6 +20,75 @@ def _connected_component_boxes(mask: np.ndarray, min_area: int) -> list[list[flo
     return boxes
 
 
+def _poly_bbox_xyxy(poly: np.ndarray) -> list[float] | None:
+    if poly.size == 0:
+        return None
+    xs = poly[:, 0]
+    ys = poly[:, 1]
+    x1 = float(xs.min())
+    y1 = float(ys.min())
+    x2 = float(xs.max())
+    y2 = float(ys.max())
+    if x2 <= x1 or y2 <= y1:
+        return None
+    return [x1, y1, x2, y2]
+
+
+def _poly_to_obb(poly: np.ndarray) -> list[float] | None:
+    if poly.shape[0] < 3:
+        return None
+    rect = cv2.minAreaRect(poly.astype(np.float32))
+    box = cv2.boxPoints(rect).astype(np.float32)
+    return [float(v) for xy in box.tolist() for v in xy]
+
+
+def _clip_obb_to_tile(obb_norm: list[float], tile_box: list[float], g_w: int, g_h: int) -> dict | None:
+    if len(obb_norm) != 8:
+        return None
+    pts = np.array(list(zip(obb_norm[0::2], obb_norm[1::2])), dtype=np.float32)
+    pts[:, 0] *= float(g_w)
+    pts[:, 1] *= float(g_h)
+
+    x0, y0, x1, y1 = [float(v) for v in tile_box]
+    tile_poly = np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], dtype=np.float32)
+    src_area = float(abs(cv2.contourArea(pts)))
+    if src_area <= 1.0:
+        return None
+
+    inter_area, inter_poly = cv2.intersectConvexConvex(pts, tile_poly)
+    if inter_poly is None or float(inter_area) <= 1.0:
+        return None
+    inter = inter_poly.reshape(-1, 2).astype(np.float32)
+
+    bbox_g = _poly_bbox_xyxy(inter)
+    obb_g = _poly_to_obb(inter)
+    if bbox_g is None or obb_g is None:
+        return None
+
+    tw = max(1.0, x1 - x0)
+    th = max(1.0, y1 - y0)
+    bbox_t = [
+        float(np.clip(bbox_g[0] - x0, 0, tw - 1)),
+        float(np.clip(bbox_g[1] - y0, 0, th - 1)),
+        float(np.clip(bbox_g[2] - x0, 0, tw - 1)),
+        float(np.clip(bbox_g[3] - y0, 0, th - 1)),
+    ]
+    if bbox_t[2] <= bbox_t[0] or bbox_t[3] <= bbox_t[1]:
+        return None
+
+    obb_t = []
+    for i in range(0, 8, 2):
+        tx = float(np.clip((obb_g[i] - x0) / tw, 0.0, 1.0))
+        ty = float(np.clip((obb_g[i + 1] - y0) / th, 0.0, 1.0))
+        obb_t.extend([tx, ty])
+
+    return {
+        "bbox": bbox_t,
+        "obb": obb_t,
+        "area_ratio": float(inter_area) / src_area,
+    }
+
+
 def _parse_uwf_obb(
     label_path: Path,
     width: int,
@@ -54,7 +123,13 @@ def _parse_uwf_obb(
     return anns
 
 
-def _parse_fgadr_masks(image_name: str, root: Path, class_map: dict[str, str], min_area: int) -> list[dict]:
+def _parse_fgadr_masks(
+    image_name: str,
+    root: Path,
+    class_map: dict[str, str],
+    min_area: int,
+    mask_to_obb: bool = True,
+) -> list[dict]:
     anns = []
     for mask_dir in sorted(root.glob("*_Masks")):
         mask_path = mask_dir / image_name
@@ -67,8 +142,30 @@ def _parse_fgadr_masks(image_name: str, root: Path, class_map: dict[str, str], m
             mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
         mask = (mask > 0).astype(np.uint8)
         cls_name = class_map.get(mask_dir.name, mask_dir.name.replace("_Masks", "").lower())
-        for box in _connected_component_boxes(mask, min_area=min_area):
-            anns.append({"class_name": cls_name, "bbox_xyxy": box})
+        if not mask_to_obb:
+            for box in _connected_component_boxes(mask, min_area=min_area):
+                anns.append({"class_name": cls_name, "bbox_xyxy": box})
+            continue
+
+        n, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+        for i in range(1, n):
+            _, _, _, _, area = stats[i]
+            if int(area) < min_area:
+                continue
+            comp = (labels == i).astype(np.uint8)
+            res = cv2.findContours(comp, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            contours = res[0] if len(res) == 2 else res[1]
+            if not contours:
+                continue
+            cnt = max(contours, key=cv2.contourArea)
+            if float(cv2.contourArea(cnt)) < float(min_area):
+                continue
+            poly = cnt.reshape(-1, 2).astype(np.float32)
+            bbox = _poly_bbox_xyxy(poly)
+            obb_xy = _poly_to_obb(poly)
+            if bbox is None or obb_xy is None:
+                continue
+            anns.append({"class_name": cls_name, "bbox_xyxy": bbox, "obb_xy": obb_xy})
     return anns
 
 
@@ -137,6 +234,8 @@ def build_coco_from_manifest(
     tile_mode: bool,
     min_comp_area: int = 8,
     min_tile_box_ratio: float = 0.2,
+    fgadr_mask_to_obb: bool = True,
+    tile_require_obb_for_obb_sources: bool = True,
     debug_max_images: int = 0,
 ) -> dict:
     categories = class_map_cfg["categories"]
@@ -184,7 +283,13 @@ def build_coco_from_manifest(
                 Path(row["filepath"]),
             )
         elif row["dataset"] == "fgadr":
-            anns_src = _parse_fgadr_masks(Path(row["filepath"]).name, Path(row["labels_path"]), fgadr_map, min_comp_area)
+            anns_src = _parse_fgadr_masks(
+                Path(row["filepath"]).name,
+                Path(row["labels_path"]),
+                fgadr_map,
+                min_comp_area,
+                mask_to_obb=fgadr_mask_to_obb,
+            )
 
         global_anns: list[dict] = []
         for ann in anns_src:
@@ -256,30 +361,51 @@ def build_coco_from_manifest(
 
             anns_tile = []
             for ann in global_anns:
+                if ann.get("obb") and len(ann["obb"]) == 8:
+                    clipped = _clip_obb_to_tile(ann["obb"], tile_box, g_w, g_h)
+                    if clipped is None:
+                        if tile_require_obb_for_obb_sources:
+                            continue
+                        inter = _intersect(ann["bbox"], tile_box)
+                        if inter is None:
+                            continue
+                        clipped = {
+                            "bbox": [
+                                inter[0] - tile_box[0],
+                                inter[1] - tile_box[1],
+                                inter[2] - tile_box[0],
+                                inter[3] - tile_box[1],
+                            ],
+                            "obb": None,
+                            "area_ratio": _box_area(inter) / max(_box_area(ann["bbox"]), 1.0),
+                        }
+                    if clipped["area_ratio"] < min_tile_box_ratio:
+                        continue
+                    tile_ann = {
+                        "class_id": ann["class_id"],
+                        "bbox": clipped["bbox"],
+                    }
+                    if clipped.get("obb") and len(clipped["obb"]) == 8:
+                        tile_ann["obb"] = clipped["obb"]
+                    anns_tile.append(tile_ann)
+                    continue
+
                 inter = _intersect(ann["bbox"], tile_box)
                 if inter is None:
                     continue
                 if _box_area(inter) / max(_box_area(ann["bbox"]), 1.0) < min_tile_box_ratio:
                     continue
-                tile_ann = {
-                    "class_id": ann["class_id"],
-                    "bbox": [
-                        inter[0] - tile_box[0],
-                        inter[1] - tile_box[1],
-                        inter[2] - tile_box[0],
-                        inter[3] - tile_box[1],
-                    ],
-                }
-                # Keep OBB only when fully contained in the tile (avoid clipped polys).
-                if ann.get("obb") and len(ann["obb"]) == 8:
-                    pts = list(zip(ann["obb"][0::2], ann["obb"][1::2]))
-                    pts_xy = [(x * g_w, y * g_h) for x, y in pts]
-                    if all(tile_box[0] <= x <= tile_box[2] and tile_box[1] <= y <= tile_box[3] for x, y in pts_xy):
-                        tw = float(tile_box[2] - tile_box[0])
-                        th = float(tile_box[3] - tile_box[1])
-                        tpts_norm = [v for x, y in pts_xy for v in ((x - tile_box[0]) / tw, (y - tile_box[1]) / th)]
-                        tile_ann["obb"] = tpts_norm
-                anns_tile.append(tile_ann)
+                anns_tile.append(
+                    {
+                        "class_id": ann["class_id"],
+                        "bbox": [
+                            inter[0] - tile_box[0],
+                            inter[1] - tile_box[1],
+                            inter[2] - tile_box[0],
+                            inter[3] - tile_box[1],
+                        ],
+                    }
+                )
 
             coco_img_id = len(coco["images"]) + 1
             coco["images"].append(

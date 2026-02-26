@@ -1,19 +1,16 @@
 input:
   manifests:
-    - manifests/uwf700.jsonl
+    - manifests/uwf700_uveitis100.jsonl
     - manifests/fgadr.jsonl
-    - manifests/deepdrid.jsonl
-    - manifests/eyepacs.jsonl
 
 output:
-  preproc_root: preproc
-  global_dirname: global
+  preproc_root: preproc_fgadr_uwf100_hr3072
 
 roi:
   method: threshold
   method_by_dataset:
     uwf700: sam2_prompted
-  downsample_max_side: 768
+  downsample_max_side: 1024
   sat_threshold: 18
   crop_pad_px: 12
   sam2:
@@ -39,44 +36,21 @@ roi:
     min_area_ratio: 0.10
     max_area_ratio: 0.98
     max_border_touch_ratio: 0.55
-  sam:
-    checkpoint: models/sam/sam_vit_h_4b8939.pth
-    model_type: vit_h
-    device: cuda
-    fallback_to_threshold: true
-    multimask_output: true
-    points_norm:
-      - [0.50, 0.50, 1]
-      - [0.35, 0.50, 1]
-      - [0.65, 0.50, 1]
-      - [0.50, 0.35, 1]
-      - [0.50, 0.65, 1]
-      - [0.03, 0.03, 0]
-      - [0.97, 0.03, 0]
-      - [0.03, 0.97, 0]
-      - [0.97, 0.97, 0]
-      - [0.50, 0.02, 0]
-      - [0.50, 0.98, 0]
-    open_kernel: 7
-    close_kernel: 19
-    min_area_ratio: 0.10
-    max_area_ratio: 0.98
-    max_border_touch_ratio: 0.55
 
 normalize:
   method: reinhard_lab_ref
   stats_erode_px: 4
   ref:
-    stats_path: preproc/ref/regular_fundus_color_stats.json
+    stats_path: preproc/ref/regular_fundus_color_stats_50.json
 
 resize:
-  global_size: 1024
+  global_size: 3072
 
 tiling:
-  tile_size: 768
-  overlap: 0.25
+  tile_size: 1536
+  overlap: 0.50
 
 verify:
   min_roi_area_ratio: 0.12
-  montage_n: 50
-  reconstruct_n: 50
+  montage_n: 20
+  reconstruct_n: 20

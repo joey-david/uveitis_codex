@@ -5,7 +5,7 @@ input:
   split_json: splits/stage0_0.json
   class_map_yaml: configs/class_map.yaml
   label_space_yaml: configs/active_label_space.yaml
-  label_space_mode: main
+  label_space_mode: vascularite
   preproc_root: preproc
   target_datasets:
     - fgadr
@@ -23,4 +23,4 @@ build:
   polygon_simplify_eps: 1.25
 
 output:
-  labels_root: labels_native
+  labels_root: labels_native_vascularite

@@ -1,0 +1,71 @@
+{
+  "checkpoint_id": "main9_ensemble_ap02739",
+  "date": "2026-02-25",
+  "branch": "mvcavit-impl",
+  "summary": "Best validation AP so far using class-wise ensemble: IterC for most classes + IterJ for oedeme_papillaire.",
+  "metrics": {
+    "val_map50": 0.2739273927392739,
+    "val_macro_f1": 0.05483546264034069,
+    "val_map50_all_classes": 0.22827282728272827,
+    "val_macro_f1_all_classes": 0.04569621886695058,
+    "val_weighted_ap50": 0.17056705670567063
+  },
+  "weights": {
+    "iterC": {
+      "path": "runs/retfound_mask/main9_iterC/best.pt",
+      "exists": true,
+      "size_bytes": 1227487000,
+      "sha256": "5138139edf47697dedf1407c42fc2e9c1a5b6053258ba1fe0dbc22848ef06a4e"
+    },
+    "iterJ": {
+      "path": "runs/retfound_mask/main9_iterJ/best.pt",
+      "exists": true,
+      "size_bytes": 1227487384,
+      "sha256": "bf819e4041ef61690ea6e60f1c80fc63e6660f5e4d3053a1a9f3fe8bb035afdd"
+    }
+  },
+  "frozen_files": {
+    "choice_json": "checkpoints/main9_ensemble_ap02739/main9_ensemble_choice_iterC_iterJ.json",
+    "iterC_thresholds": "checkpoints/main9_ensemble_ap02739/iterC_calibrated_thresholds.json",
+    "iterC_postprocess": "checkpoints/main9_ensemble_ap02739/iterC_detection_postprocess.json",
+    "iterJ_thresholds": "checkpoints/main9_ensemble_ap02739/iterJ_calibrated_thresholds.json",
+    "iterJ_postprocess": "checkpoints/main9_ensemble_ap02739/iterJ_detection_postprocess.json",
+    "metrics": "checkpoints/main9_ensemble_ap02739/metrics_ap50_v2.json"
+  },
+  "runtime_paths": {
+    "iterC_thresholds": "runs/retfound_mask/main9_iterC/calibrated_thresholds.json",
+    "iterC_postprocess": "runs/retfound_mask/main9_iterC/detection_postprocess.json",
+    "iterJ_thresholds": "runs/retfound_mask/main9_iterJ/calibrated_thresholds.json",
+    "iterJ_postprocess": "runs/retfound_mask/main9_iterJ/detection_postprocess.json",
+    "choice_json": "configs/experiments/main9_ensemble_choice_iterC_iterJ.json"
+  },
+  "data_limits": {
+    "uwf_labeled_split_sizes": {
+      "train": 71,
+      "val": 15,
+      "test": 12
+    },
+    "uwf_train_object_counts": {
+      "hemorragie": 57,
+      "hyalite": 43,
+      "nodule_choroidien": 71,
+      "oedeme_papillaire": 12,
+      "ischemie_retine": 3,
+      "exudats": 6,
+      "foyer_choroidien": 42,
+      "granulome_choroidien": 8
+    },
+    "uwf_val_object_counts": {
+      "hyalite": 12,
+      "nodule_choroidien": 6,
+      "oedeme_papillaire": 1,
+      "foyer_choroidien": 1,
+      "granulome_choroidien": 2
+    }
+  },
+  "repro_commands": [
+    "python scripts/ensemble_native_predictions.py --pred-a eval/main9_iterC_detcalib_preds/predictions.jsonl --pred-b eval/main9_iterJ_best_preds/predictions.jsonl --class-source-json configs/experiments/main9_ensemble_choice_iterC_iterJ.json --out-jsonl eval/main9_ensemble_best_preds/predictions.jsonl --out-meta eval/main9_ensemble_best_preds/ensemble_meta.json",
+    "python scripts/eval_native_detection.py --gt-index labels_native_main9_fastiter/uwf700_val_global.jsonl --pred-jsonl eval/main9_ensemble_best_preds/predictions.jsonl --out eval/main9_ensemble_best_preds/metrics_ap50_v2.json --iou 0.5 --score 0.0",
+    "python scripts/qa_native_pred_overlays.py --gt-index labels_native_main9_fastiter/uwf700_val_global.jsonl --pred-jsonl eval/main9_ensemble_best_preds/predictions.jsonl --out-dir eval/main9_ensemble_best_preds/previews --max-images 15"
+  ]
+}

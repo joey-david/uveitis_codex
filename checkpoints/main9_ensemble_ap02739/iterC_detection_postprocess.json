@@ -1,0 +1,138 @@
+{
+  "search": {
+    "iou_threshold": 0.5,
+    "thresholds": [
+      0.12,
+      0.15,
+      0.18,
+      0.2,
+      0.24,
+      0.28,
+      0.35,
+      0.45,
+      0.6
+    ],
+    "min_areas": [
+      8,
+      16,
+      24,
+      32,
+      48,
+      64,
+      96
+    ],
+    "open_kernel": 0,
+    "close_kernel": 3,
+    "polygon_simplify_eps": 1.0,
+    "nms_iou": 0.2,
+    "target_metric": "ap50"
+  },
+  "classes": {
+    "foyer_choroidien": {
+      "threshold": 0.12,
+      "min_area_px": 8,
+      "metric": 0.0,
+      "ap50": 0.0,
+      "f1": 0.0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "n_gt": 1,
+      "n_pred": 25,
+      "tp": 0,
+      "fp": 25,
+      "fn": 1
+    },
+    "hyalite": {
+      "threshold": 0.12,
+      "min_area_px": 8,
+      "metric": 0.0891089108910891,
+      "ap50": 0.0891089108910891,
+      "f1": 0.015267175572519083,
+      "precision": 0.008403361344537815,
+      "recall": 0.08333333333333333,
+      "n_gt": 12,
+      "n_pred": 119,
+      "tp": 1,
+      "fp": 118,
+      "fn": 11
+    },
+    "hemorragie": {
+      "threshold": 0.95,
+      "min_area_px": 64,
+      "metric": 0.0,
+      "ap50": 0.0,
+      "f1": 0.0,
+      "n_gt": 0,
+      "n_pred": 0
+    },
+    "nodule_choroidien": {
+      "threshold": 0.12,
+      "min_area_px": 8,
+      "metric": 0.2805280528052807,
+      "ap50": 0.2805280528052807,
+      "f1": 0.047619047619047616,
+      "precision": 0.02564102564102564,
+      "recall": 0.3333333333333333,
+      "n_gt": 6,
+      "n_pred": 78,
+      "tp": 2,
+      "fp": 76,
+      "fn": 4
+    },
+    "granulome_choroidien": {
+      "threshold": 0.12,
+      "min_area_px": 8,
+      "metric": 0.0,
+      "ap50": 0.0,
+      "f1": 0.0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "n_gt": 2,
+      "n_pred": 59,
+      "tp": 0,
+      "fp": 59,
+      "fn": 2
+    },
+    "macroanevrisme_arteriel": {
+      "threshold": 0.95,
+      "min_area_px": 64,
+      "metric": 0.0,
+      "ap50": 0.0,
+      "f1": 0.0,
+      "n_gt": 0,
+      "n_pred": 0
+    },
+    "exudats": {
+      "threshold": 0.95,
+      "min_area_px": 64,
+      "metric": 0.0,
+      "ap50": 0.0,
+      "f1": 0.0,
+      "n_gt": 0,
+      "n_pred": 0
+    },
+    "oedeme_papillaire": {
+      "threshold": 0.45,
+      "min_area_px": 8,
+      "metric": 0.25,
+      "ap50": 0.25,
+      "f1": 0.11764705882352941,
+      "precision": 0.0625,
+      "recall": 1.0,
+      "n_gt": 1,
+      "n_pred": 16,
+      "tp": 1,
+      "fp": 15,
+      "fn": 0
+    },
+    "ischemie_retine": {
+      "threshold": 0.95,
+      "min_area_px": 64,
+      "metric": 0.0,
+      "ap50": 0.0,
+      "f1": 0.0,
+      "n_gt": 0,
+      "n_pred": 0
+    }
+  }
+}
