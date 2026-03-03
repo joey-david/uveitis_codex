@@ -1,0 +1,49 @@
+seed: 85
+
+run:
+  output_dir: runs/retfound_mask
+  name: main9_iterO_uwf_overfit
+
+data:
+  train_index: labels_native_main9_fastiter/uwf700_all_global.jsonl
+  val_index: labels_native_main9_fastiter/uwf700_val_global.jsonl
+  class_map_active: labels_native_main9_fastiter/class_map_active.json
+  image_size: 1024
+  train_keep_empty: false
+  val_keep_empty: true
+  noise_aware_uwf: true
+  uwf_erode_kernel: 7
+  uwf_dilate_kernel: 15
+  uwf_boundary_weight: 0.20
+
+model:
+  vendor_dir: third_party/RETFound_MAE
+  retfound_ckpt: models/retfound/RETFound_cfp_weights.pth
+  adapt_ckpt: runs/retfound_adapt/main9_iterA/best.pt
+  init_ckpt: runs/retfound_mask/main9_iterM_noise_1024/best.pt
+  decoder_channels: 192
+
+train:
+  device: cuda
+  epochs: 18
+  batch_size: 2
+  eval_batch_size: 2
+  num_workers: 0
+  lr: 1.8e-5
+  min_lr: 1.0e-6
+  weight_decay: 5.0e-5
+  freeze_blocks: 0
+  balanced_sampler: true
+  sampler_mode: max_inv
+  sampler_power: 1.8
+  empty_sample_weight: 0.02
+  auto_class_weights: true
+  class_weight_power: 1.5
+  class_weight_min: 0.5
+  class_weight_max: 12.0
+  amp: true
+  focal_gamma: 2.0
+  focal_alpha: 0.6
+
+eval:
+  mask_threshold: 0.20

@@ -1,0 +1,40 @@
+seed: 72
+
+run:
+  output_dir: runs/retfound_mask
+  name: noobb_fgadr_adapt2
+
+data:
+  train_index: labels_native_main9_fastiter/fgadr_train80_global.jsonl
+  val_index: labels_native_main9_fastiter/fgadr_val20_global.jsonl
+  class_map_active: labels_native_main9_fastiter/class_map_active.json
+  image_size: 1024
+  train_keep_empty: false
+  val_keep_empty: true
+
+model:
+  vendor_dir: third_party/RETFound_MAE
+  retfound_ckpt: models/retfound/RETFound_cfp_weights.pth
+  adapt_ckpt: runs/retfound_adapt/noobb_iter2_fgadr_uwf/best.pt
+  decoder_channels: 192
+
+train:
+  device: cuda
+  epochs: 6
+  batch_size: 2
+  eval_batch_size: 2
+  num_workers: 0
+  lr: 6.0e-5
+  min_lr: 1.0e-6
+  weight_decay: 1.0e-4
+  freeze_blocks: 4
+  balanced_sampler: true
+  sampler_mode: mean_inv
+  sampler_power: 1.0
+  empty_sample_weight: 0.1
+  amp: true
+  focal_gamma: 0.0
+  focal_alpha: 0.25
+
+eval:
+  mask_threshold: 0.20

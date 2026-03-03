@@ -171,6 +171,7 @@ def masked_bce_dice_loss(
     logits: torch.Tensor,
     target: torch.Tensor,
     class_weights: torch.Tensor | None = None,
+    pixel_weights: torch.Tensor | None = None,
     focal_gamma: float = 0.0,
     focal_alpha: float = 0.25,
 ) -> torch.Tensor:
@@ -193,6 +194,10 @@ def masked_bce_dice_loss(
     else:
         bce_map = bce_raw
 
+    if pixel_weights is not None:
+        pw = pixel_weights.to(logits.device, dtype=logits.dtype)
+        bce_map = bce_map * pw
+
     if class_weights is not None:
         cw = class_weights.to(logits.device, dtype=logits.dtype).view(1, -1, 1, 1)
         bce = (bce_map * cw).mean()
@@ -200,8 +205,13 @@ def masked_bce_dice_loss(
         bce = bce_map.mean()
 
     prob = torch.sigmoid(logits)
-    inter = (prob * target).sum(dim=(0, 2, 3))
-    den = prob.sum(dim=(0, 2, 3)) + target.sum(dim=(0, 2, 3)) + 1e-6
+    if pixel_weights is not None:
+        pw = pixel_weights.to(logits.device, dtype=logits.dtype)
+        inter = (prob * target * pw).sum(dim=(0, 2, 3))
+        den = ((prob + target) * pw).sum(dim=(0, 2, 3)) + 1e-6
+    else:
+        inter = (prob * target).sum(dim=(0, 2, 3))
+        den = prob.sum(dim=(0, 2, 3)) + target.sum(dim=(0, 2, 3)) + 1e-6
     dice = 1.0 - ((2.0 * inter + 1e-6) / den)
     present = target.sum(dim=(0, 2, 3)) > 0
     if class_weights is not None:

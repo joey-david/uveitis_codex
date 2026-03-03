@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>UWF Clinical Inference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="page-bg"></div>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-dot"></div>
+        <div>
+          <h1>UWF Clinical Inference</h1>
+          <p>Lesion localization and class prediction for retinal images</p>
+        </div>
+      </div>
+      <div id="apiStatus" class="status">API: checking…</div>
+    </header>
+
+    <section class="layout">
+      <aside class="panel control">
+        <h2>Run Inference</h2>
+        <label class="field">
+          <span>Profile</span>
+          <select id="profileSelect"></select>
+        </label>
+
+        <label class="uploader" for="fileInput" id="dropZone">
+          <input id="fileInput" type="file" accept="image/*" />
+          <div>
+            <strong>Drop image here</strong>
+            <span>or click to browse</span>
+          </div>
+        </label>
+
+        <button id="predictBtn" class="primary" disabled>Run Prediction</button>
+        <p id="runMeta" class="muted"></p>
+      </aside>
+
+      <section class="panel results">
+        <div class="image-grid">
+          <figure>
+            <figcaption>Original + Predictions</figcaption>
+            <img id="overlayImg" alt="overlay preview" />
+          </figure>
+          <figure>
+            <figcaption>Preprocessed (Model Input)</figcaption>
+            <img id="preprocImg" alt="preprocessed preview" />
+          </figure>
+        </div>
+
+        <div class="cards">
+          <article class="card">
+            <h3>Detected Findings</h3>
+            <div id="chips" class="chips"></div>
+          </article>
+          <article class="card">
+            <h3>Predictions</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Class</th>
+                    <th>Score</th>
+                    <th>BBox (x1,y1,x2,y2)</th>
+                  </tr>
+                </thead>
+                <tbody id="predTable"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="./config.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

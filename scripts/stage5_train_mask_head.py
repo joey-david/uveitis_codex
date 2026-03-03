@@ -51,11 +51,21 @@ def _evaluate(
     losses = []
     ious = []
     with torch.no_grad():
-        for images, masks, _ in loader:
+        for images, masks, weights, _ in loader:
             images = images.to(device)
             masks = masks.to(device)
+            weights = weights.to(device)
             logits = model(images)
-            losses.append(float(masked_bce_dice_loss(logits, masks, class_weights=class_weights).item()))
+            losses.append(
+                float(
+                    masked_bce_dice_loss(
+                        logits,
+                        masks,
+                        class_weights=class_weights,
+                        pixel_weights=weights,
+                    ).item()
+                )
+            )
             ious.append(multi_label_iou(logits, masks, threshold=threshold).detach().cpu().numpy())
 
     iou_arr = np.stack(ious, axis=0) if ious else np.zeros((1, 1), dtype=np.float32)
@@ -111,12 +121,17 @@ def main() -> None:
         num_classes=num_classes,
         image_size=int(cfg["data"].get("image_size", 1024)),
         keep_empty=bool(cfg["data"].get("train_keep_empty", cfg["data"].get("keep_empty", True))),
+        noise_aware_uwf=bool(cfg["data"].get("noise_aware_uwf", False)),
+        uwf_erode_kernel=int(cfg["data"].get("uwf_erode_kernel", 5)),
+        uwf_dilate_kernel=int(cfg["data"].get("uwf_dilate_kernel", 13)),
+        uwf_boundary_weight=float(cfg["data"].get("uwf_boundary_weight", 0.25)),
     )
     val_ds = NativeMaskDataset(
         index_jsonl=cfg["data"]["val_index"],
         num_classes=num_classes,
         image_size=int(cfg["data"].get("image_size", 1024)),
         keep_empty=bool(cfg["data"].get("val_keep_empty", True)),
+        noise_aware_uwf=False,
     )
 
     sampler = (
@@ -214,9 +229,10 @@ def main() -> None:
         model.train()
         losses = []
 
-        for images, masks, _ in train_loader:
+        for images, masks, weights, _ in train_loader:
             images = images.to(device)
             masks = masks.to(device)
+            weights = weights.to(device)
             opt.zero_grad(set_to_none=True)
             with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=use_amp):
                 logits = model(images)
@@ -224,6 +240,7 @@ def main() -> None:
                     logits,
                     masks,
                     class_weights=class_weights_t,
+                    pixel_weights=weights,
                     focal_gamma=focal_gamma,
                     focal_alpha=focal_alpha,
                 )

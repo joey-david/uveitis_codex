@@ -51,7 +51,13 @@ def _ap_from_pr(rec: np.ndarray, prec: np.ndarray) -> float:
     return ap / 101.0
 
 
-def evaluate(gt_index: str, pred_jsonl: str, iou_thr: float, score_thr: float) -> dict:
+def evaluate(
+    gt_index: str,
+    pred_jsonl: str,
+    iou_thr: float,
+    score_thr: float,
+    allowed_classes: set[str] | None = None,
+) -> dict:
     """Evaluate predictions against GT and return aggregate + per-class metrics."""
     gt_rows = read_jsonl(gt_index)
     pred_rows = read_jsonl(pred_jsonl)
@@ -71,6 +77,8 @@ def evaluate(gt_index: str, pred_jsonl: str, iou_thr: float, score_thr: float) -
             if box is None:
                 continue
             name = str(obj["class_name"])
+            if allowed_classes is not None and name not in allowed_classes:
+                continue
             class_names.add(name)
             gt_by_class[name].append({"record_id": rec_id, "bbox": box, "used": False})
 
@@ -78,6 +86,8 @@ def evaluate(gt_index: str, pred_jsonl: str, iou_thr: float, score_thr: float) -
         for p in pred_rec.get("predictions", []):
             name = str(p.get("class_name", ""))
             if not name:
+                continue
+            if allowed_classes is not None and name not in allowed_classes:
                 continue
             class_names.add(name)
             score = float(p.get("score", 0.0))
@@ -176,9 +186,24 @@ def main() -> None:
     parser.add_argument("--out", required=True)
     parser.add_argument("--iou", type=float, default=0.5)
     parser.add_argument("--score", type=float, default=0.0)
+    parser.add_argument("--classes", default="", help="Optional comma-separated class names to evaluate")
+    parser.add_argument("--classes-file", default="", help="Optional newline-separated class list file")
     args = parser.parse_args()
 
-    metrics = evaluate(args.gt_index, args.pred_jsonl, iou_thr=args.iou, score_thr=args.score)
+    allowed = None
+    if args.classes_file:
+        names = [ln.strip() for ln in Path(args.classes_file).read_text(encoding="utf-8").splitlines() if ln.strip()]
+        allowed = set(names)
+    elif args.classes:
+        allowed = {x.strip() for x in str(args.classes).split(",") if x.strip()}
+
+    metrics = evaluate(
+        args.gt_index,
+        args.pred_jsonl,
+        iou_thr=args.iou,
+        score_thr=args.score,
+        allowed_classes=allowed,
+    )
     save_json(args.out, metrics)
     print(json.dumps({"out": args.out, "map50": metrics["map50"], "macro_f1": metrics["macro_f1"]}, indent=2))
 

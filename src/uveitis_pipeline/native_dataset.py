@@ -22,21 +22,30 @@ class NativeMaskDataset(Dataset):
         num_classes: int,
         image_size: int = 0,
         keep_empty: bool = True,
+        noise_aware_uwf: bool = False,
+        uwf_erode_kernel: int = 5,
+        uwf_dilate_kernel: int = 13,
+        uwf_boundary_weight: float = 0.25,
     ):
         self.rows = read_jsonl(index_jsonl)
         if not keep_empty:
             self.rows = [r for r in self.rows if int(r.get("num_objects", 0)) > 0]
         self.num_classes = int(num_classes)
         self.image_size = int(image_size)
+        self.noise_aware_uwf = bool(noise_aware_uwf)
+        self.uwf_erode_kernel = int(uwf_erode_kernel)
+        self.uwf_dilate_kernel = int(uwf_dilate_kernel)
+        self.uwf_boundary_weight = float(uwf_boundary_weight)
 
     def __len__(self) -> int:
         """Return number of samples."""
         return len(self.rows)
 
-    def _load_mask(self, labels_path: str, width: int, height: int) -> np.ndarray:
-        """Rasterize polygon labels to CxHxW mask tensor (uint8)."""
+    def _load_mask(self, labels_path: str, width: int, height: int) -> tuple[np.ndarray, np.ndarray]:
+        """Rasterize polygon labels to CxHxW mask + per-pixel weights."""
         rec = json.loads(Path(labels_path).read_text(encoding="utf-8"))
         mask = np.zeros((self.num_classes, height, width), dtype=np.uint8)
+        weight = np.ones((self.num_classes, height, width), dtype=np.float32)
         for obj in rec.get("objects", []):
             cid = int(obj["class_id"]) - 1
             if cid < 0 or cid >= self.num_classes:
@@ -45,8 +54,20 @@ class NativeMaskDataset(Dataset):
             poly[:, 0] = np.clip(poly[:, 0] * width, 0, max(0, width - 1))
             poly[:, 1] = np.clip(poly[:, 1] * height, 0, max(0, height - 1))
             poly = np.round(poly).astype(np.int32)
-            cv2.fillPoly(mask[cid], [poly], 1)
-        return mask
+            obj_mask = np.zeros((height, width), dtype=np.uint8)
+            cv2.fillPoly(obj_mask, [poly], 1)
+            mask[cid] = np.maximum(mask[cid], obj_mask)
+
+            if self.noise_aware_uwf and str(obj.get("source", "")) == "uwf_obb":
+                e = max(1, int(self.uwf_erode_kernel))
+                d = max(e, int(self.uwf_dilate_kernel))
+                k_e = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (e, e))
+                k_d = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (d, d))
+                core = cv2.erode(obj_mask, k_e, iterations=1)
+                outer = cv2.dilate(obj_mask, k_d, iterations=1)
+                uncertain = (outer > 0) & (core == 0)
+                weight[cid][uncertain] = np.minimum(weight[cid][uncertain], self.uwf_boundary_weight)
+        return mask, weight
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor, dict]:
         """Return normalized image tensor, binary class masks, and metadata."""
@@ -57,18 +78,22 @@ class NativeMaskDataset(Dataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         h, w = image.shape[:2]
 
-        mask = self._load_mask(row["labels_path"], width=int(row.get("width", w)), height=int(row.get("height", h)))
+        mask, weight = self._load_mask(row["labels_path"], width=int(row.get("width", w)), height=int(row.get("height", h)))
 
         if self.image_size > 0 and (h != self.image_size or w != self.image_size):
             image = cv2.resize(image, (self.image_size, self.image_size), interpolation=cv2.INTER_AREA)
             resized = np.zeros((self.num_classes, self.image_size, self.image_size), dtype=np.uint8)
+            resized_w = np.ones((self.num_classes, self.image_size, self.image_size), dtype=np.float32)
             for c in range(self.num_classes):
                 resized[c] = cv2.resize(mask[c], (self.image_size, self.image_size), interpolation=cv2.INTER_NEAREST)
+                resized_w[c] = cv2.resize(weight[c], (self.image_size, self.image_size), interpolation=cv2.INTER_LINEAR)
             mask = resized
+            weight = resized_w
             h = w = self.image_size
 
         image_t = torch.from_numpy(image.transpose(2, 0, 1)).float() / 255.0
         mask_t = torch.from_numpy(mask).float()
+        weight_t = torch.from_numpy(weight).float()
         meta = {
             "record_id": row.get("record_id", str(idx)),
             "image_id": row.get("image_id", ""),
@@ -77,7 +102,7 @@ class NativeMaskDataset(Dataset):
             "image_path": row["image_path"],
             "labels_path": row["labels_path"],
         }
-        return image_t, mask_t, meta
+        return image_t, mask_t, weight_t, meta
 
     def build_balanced_sampler(
         self,
@@ -156,7 +181,9 @@ class AdaptImageDataset(Dataset):
         return t1, t2
 
 
-def mask_collate(batch: list[tuple[torch.Tensor, torch.Tensor, dict]]) -> tuple[torch.Tensor, torch.Tensor, list[dict]]:
+def mask_collate(
+    batch: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict]]
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, list[dict]]:
     """Collate native mask samples to batched tensors."""
-    images, masks, meta = zip(*batch)
-    return torch.stack(images, dim=0), torch.stack(masks, dim=0), list(meta)
+    images, masks, weights, meta = zip(*batch)
+    return torch.stack(images, dim=0), torch.stack(masks, dim=0), torch.stack(weights, dim=0), list(meta)

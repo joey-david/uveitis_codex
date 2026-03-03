@@ -1,0 +1,26 @@
+services:
+  inference-api:
+    image: uveitis-codex:latest
+    container_name: uveitis-inference-api
+    working_dir: /workspace
+    command: >
+      bash -lc "uv run python scripts/serve_inference_api.py
+      --config configs/inference_api.yaml
+      --host 0.0.0.0
+      --port 8080"
+    environment:
+      UV_CACHE_DIR: /tmp/uv-cache
+      UVEITIS_API_TOKEN: ${UVEITIS_API_TOKEN:-}
+      UVEITIS_CORS_ORIGINS: ${UVEITIS_CORS_ORIGINS:-*}
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - /home/joey.david/uveitis_codex:/workspace
+    ports:
+      - "18080:8080"
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    restart: unless-stopped
