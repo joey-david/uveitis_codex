@@ -1,117 +1,77 @@
-# Web Inference UI Deployment
+# Déploiement API + UI Clinique
 
-This setup has two parts:
-- API server (runs on this GPU server, hosts the model)
-- Static web UI (can be deployed on any machine/web host)
+Guide complet pour exposer le modèle du serveur GPU vers une UI locale ou distante.
 
-## 1) Start the API on the GPU server
+## 1) API d'inférence sur le serveur GPU
 
-From repo root:
+L'API est servie par `scripts/serve_inference_api.py` avec config `configs/inference_api.yaml`.
 
-```bash
-uv run python scripts/serve_inference_api.py --config configs/inference_api.yaml --host 0.0.0.0 --port 8080
-```
+### Option recommandée: Docker Compose
 
-Expected startup behavior:
-- model branches are loaded once into GPU memory
-- process stays running and serves HTTP endpoints
-
-Quick checks:
-
-```bash
-curl http://127.0.0.1:8080/health
-```
-
-Expected output:
-
-```json
-{"ok":true}
-```
-
-```bash
-curl http://127.0.0.1:8080/v1/profiles
-```
-
-Expected output contains:
-- `best_overfit`
-- `balanced`
-
-Optional access control:
-
-```bash
-export UVEITIS_API_TOKEN='replace-with-strong-token'
-export UVEITIS_CORS_ORIGINS='https://your-ui-domain.example,http://localhost:5173'
-uv run python scripts/serve_inference_api.py --config configs/inference_api.yaml --host 0.0.0.0 --port 8080
-```
-
-When token is set, clients must send:
-- `Authorization: Bearer <token>`
-
-### Docker service (recommended)
-
-Compose file:
+Fichier:
 - `deploy/docker-compose.inference-api.yml`
 
-Start:
-
+Démarrage:
 ```bash
 docker compose -f deploy/docker-compose.inference-api.yml up -d
 ```
 
-Check:
-
+Vérification:
 ```bash
 docker compose -f deploy/docker-compose.inference-api.yml ps
-docker compose -f deploy/docker-compose.inference-api.yml logs -f --tail=100
+docker compose -f deploy/docker-compose.inference-api.yml logs -f --tail=120
 curl http://127.0.0.1:18080/health
+curl http://127.0.0.1:18080/v1/profiles
 ```
 
-Stop:
-
+Arrêt / redémarrage:
 ```bash
 docker compose -f deploy/docker-compose.inference-api.yml down
-```
-
-Optional token + CORS before start:
-
-```bash
-export UVEITIS_API_TOKEN='replace-with-strong-token'
-export UVEITIS_CORS_ORIGINS='http://127.0.0.1:5173'
 docker compose -f deploy/docker-compose.inference-api.yml up -d
 ```
 
-## 2) Deploy the UI elsewhere
-
-UI folder:
-- `webui/clinical-ui`
-
-Edit:
-- `webui/clinical-ui/config.js`
-
-Set:
-- `apiBaseUrl` to this server API URL (e.g. `https://your-gpu-server.example`)
-- `apiToken` if API token is enabled
-
-Serve statically (example):
-
+### Option directe (sans compose)
 ```bash
-cd webui/clinical-ui
-python3 -m http.server 5173
+uv run python scripts/serve_inference_api.py \
+  --config configs/inference_api.yaml \
+  --host 0.0.0.0 --port 8080
 ```
 
-Open:
-- `http://127.0.0.1:5173`
+## 2) Sécurité API (token + CORS)
 
-### Reach server API from your local machine
+Variables supportées:
+- `UVEITIS_API_TOKEN`: active auth `Bearer <token>`
+- `UVEITIS_CORS_ORIGINS`: liste CSV des origines front autorisées
 
-If direct network access to server port `18080` is not available, use an SSH tunnel:
+Exemple:
+```bash
+export UVEITIS_API_TOKEN='replace-with-strong-token'
+export UVEITIS_CORS_ORIGINS='http://127.0.0.1:5173,https://votre-ui.example'
+docker compose -f deploy/docker-compose.inference-api.yml up -d
+```
 
+## 3) Accès depuis la machine locale (SSH tunnel)
+
+Depuis le PC local:
 ```bash
 ssh -N -L 18080:127.0.0.1:18080 joey.david@<SERVER_HOST>
 ```
 
-Then set in `webui/clinical-ui/config.js`:
+Ensuite, côté local:
+```bash
+curl http://127.0.0.1:18080/health
+```
+Doit retourner `{"ok":true}`.
 
+## 4) Déploiement UI
+
+Dossier UI:
+- `webui/clinical-ui`
+
+Configurer l'endpoint API:
+- `webui/clinical-ui/config.js`
+
+Exemple local tunnelé:
 ```js
 window.UVEITIS_UI_CONFIG = {
   apiBaseUrl: "http://127.0.0.1:18080",
@@ -119,27 +79,65 @@ window.UVEITIS_UI_CONFIG = {
 };
 ```
 
-## 3) API contract used by the UI
+Servir la UI en local:
+```bash
+cd webui/clinical-ui
+python3 -m http.server 5173
+```
+
+Ouvrir:
+- `http://127.0.0.1:5173`
+
+## 5) Fonctionnalités UI actuellement en place
+
+- interface française,
+- état API (en ligne/hors ligne),
+- barre de progression globale,
+- étapes pipeline (connexion, transmission, prétraitement, inférence, rendu),
+- télémétrie transfert/temps (octets, débit, temps serveur, RTT),
+- tableaux/classes détectées,
+- zoom plein écran sur images résultat.
+
+## 6) Contrat API utilisé par l'UI
+
+### `GET /health`
+Retour:
+```json
+{"ok": true}
+```
 
 ### `GET /v1/profiles`
-- returns available inference profiles
+Retourne les profils disponibles (`best_overfit`, `balanced`, etc.).
 
 ### `POST /v1/predict`
-Form fields:
-- `file`: image file (`image/*`)
-- `profile`: profile name (`best_overfit` by default)
+Form-data:
+- `file`: image (`image/*`)
+- `profile`: nom du profil (par défaut `best_overfit`)
 
-Response includes:
-- `predictions` (class, score, bbox, polygon)
+Retour:
+- `predictions` (classe, score, bbox, polygone/obb)
 - `counts_by_class`
 - `timings_ms`
-- PNG images as base64:
-  - `original_overlay_png_b64`
-  - `global_preprocessed_png_b64`
-  - `global_overlay_png_b64`
-  - `roi_mask_png_b64`
+- `images.*_png_b64` pour affichage front
 
-## 4) Notes
+## 7) Troubleshooting
 
-- The API profile `best_overfit` is the highest-performing in-domain profile.
-- It is intentionally UWF-focused and should be validated externally before clinical use beyond this dataset distribution.
+- `304` dans les logs UI: normal (cache navigateur).
+- `404 /favicon.ico`: corrigé par `webui/clinical-ui/favicon.svg`; si persiste, hard refresh (`Ctrl+Shift+R`).
+- `API offline` dans UI:
+  - vérifier `docker compose ... ps`
+  - vérifier `curl http://127.0.0.1:18080/health` sur serveur
+  - vérifier tunnel SSH actif côté local
+  - vérifier `apiBaseUrl` dans `config.js`
+- `401 Unauthorized`:
+  - token activé côté API mais absent/incorrect côté UI.
+- latence élevée:
+  - vérifier charge GPU (`nvidia-smi`) et saturation I/O.
+
+## 8) Emplacements utiles
+
+- Compose: `deploy/docker-compose.inference-api.yml`
+- API server: `scripts/serve_inference_api.py`
+- Service inference: `src/uveitis_pipeline/inference_service.py`
+- Config API/profils: `configs/inference_api.yaml`
+- UI clinique: `webui/clinical-ui/`
