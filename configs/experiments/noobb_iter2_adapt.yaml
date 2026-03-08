@@ -1,0 +1,33 @@
+seed: 71
+
+run:
+  output_dir: runs/retfound_adapt
+  name: noobb_iter2_fgadr_uwf
+
+data:
+  manifests:
+    - manifests/fgadr_train700.jsonl
+    - manifests/uwf700_labeled.jsonl
+  split_json: splits/stage0_0.json
+  splits: [train, val, test]
+  datasets: [fgadr, uwf700]
+  preproc_root: preproc_main9_fastiter
+  image_subdir: norm
+  max_images: 0
+
+model:
+  vendor_dir: third_party/RETFound_MAE
+  retfound_ckpt: models/retfound/RETFound_cfp_weights.pth
+  input_size: 224
+  proj_dim: 256
+
+train:
+  device: cuda
+  epochs: 16
+  batch_size: 32
+  num_workers: 0
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+  freeze_blocks: 4
+  temperature: 0.2
+  amp: true

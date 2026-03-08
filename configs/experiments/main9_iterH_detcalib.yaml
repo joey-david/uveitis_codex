@@ -1,0 +1,26 @@
+model:
+  checkpoint: runs/retfound_mask/main9_iterH/best.pt
+  vendor_dir: third_party/RETFound_MAE
+  retfound_ckpt: models/retfound/RETFound_cfp_weights.pth
+  class_map_active: labels_native_main9_fastiter/class_map_active.json
+  image_size: 1024
+  decoder_channels: 256
+
+data:
+  val_index: labels_native_main9_fastiter/uwf700_val_global.jsonl
+  max_images: 0
+
+search:
+  iou_threshold: 0.5
+  target_metric: ap50
+  thresholds: [0.10, 0.12, 0.15, 0.18, 0.20, 0.24, 0.30, 0.40, 0.55]
+  min_areas: [8, 16, 24, 32, 48, 64, 96]
+  open_kernel: 0
+  close_kernel: 3
+  polygon_simplify_eps: 1.0
+  nms_iou: 0.2
+  absent_class_threshold: 0.95
+  default_min_area_px: 64
+
+output:
+  detection_postprocess_json: runs/retfound_mask/main9_iterH/detection_postprocess.json

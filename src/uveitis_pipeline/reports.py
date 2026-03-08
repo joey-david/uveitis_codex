@@ -1,176 +1,176 @@
+"""Dataset and preprocessing reporting helpers for roadmap checkpoints."""
+
 from __future__ import annotations
 
 import json
-import random
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-import numpy as np
 import cv2
+import numpy as np
 
-from .common import read_image, read_jsonl, save_json
+from .common import ensure_dir, read_image, read_jsonl, save_json, write_image
 
 
-def report_dataset(manifest_paths: list[str], coco_paths: list[str], out_json: str) -> dict:
-    counts = {"images": 0, "datasets": Counter(), "label_formats": Counter(), "splits": Counter()}
-    for path in manifest_paths:
-        for row in read_jsonl(path):
-            counts["images"] += 1
-            counts["datasets"][row["dataset"]] += 1
-            counts["label_formats"][row["label_format"]] += 1
-            counts["splits"][row["split"]] += 1
+def _global_path(preproc_root: Path, image_key: str) -> Path:
+    """Resolve preprocessed global image path."""
+    p = preproc_root / "global" / f"{image_key}.png"
+    if p.exists():
+        return p
+    return preproc_root / "global_1024" / f"{image_key}.png"
 
-    coco_stats = {}
-    for path in coco_paths:
-        if not Path(path).exists():
+
+def report_dataset(manifests: list[str], label_indexes: list[str], out: str) -> str:
+    """Write dataset and label distribution report (native labels or COCO)."""
+    rows: list[dict] = []
+    for path in manifests:
+        rows.extend(read_jsonl(path))
+
+    by_dataset = Counter(r.get("dataset", "unknown") for r in rows)
+    by_split = Counter(r.get("split", "") for r in rows)
+    by_format = Counter(r.get("label_format", "") for r in rows)
+
+    label_stats = []
+    for path in label_indexes:
+        p = Path(path)
+        if not p.exists():
             continue
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
-        class_counts = Counter(a["category_id"] for a in data["annotations"])
-        areas = [a["area"] for a in data["annotations"]]
-        coco_stats[Path(path).name] = {
-            "images": len(data["images"]),
-            "annotations": len(data["annotations"]),
-            "class_counts": dict(class_counts),
-            "avg_lesion_area": float(np.mean(areas)) if areas else 0.0,
-        }
+        if p.suffix == ".jsonl":
+            recs = read_jsonl(p)
+            label_stats.append(
+                {
+                    "path": p.as_posix(),
+                    "kind": "native_index",
+                    "num_records": len(recs),
+                    "num_objects": int(sum(int(r.get("num_objects", 0)) for r in recs)),
+                    "non_empty_records": int(sum(1 for r in recs if int(r.get("num_objects", 0)) > 0)),
+                }
+            )
+            continue
 
-    out = {
-        "images": counts["images"],
-        "datasets": dict(counts["datasets"]),
-        "label_formats": dict(counts["label_formats"]),
-        "splits": dict(counts["splits"]),
-        "coco": coco_stats,
+        data = json.loads(p.read_text(encoding="utf-8"))
+        if isinstance(data, dict) and "images" in data and "annotations" in data:
+            label_stats.append(
+                {
+                    "path": p.as_posix(),
+                    "kind": "coco",
+                    "num_images": len(data["images"]),
+                    "num_annotations": len(data["annotations"]),
+                }
+            )
+
+    out_path = Path(out)
+    ensure_dir(out_path.parent)
+
+    payload = {
+        "num_manifest_rows": len(rows),
+        "dataset_counts": dict(by_dataset),
+        "split_counts": dict(by_split),
+        "label_format_counts": dict(by_format),
+        "label_indexes": label_stats,
     }
-    save_json(out_json, out)
-    return out
+    save_json(out_path.with_suffix(".json"), payload)
+
+    lines = ["# Dataset Report", "", f"Rows: {len(rows)}", "", "## Datasets"]
+    for k, v in sorted(by_dataset.items()):
+        lines.append(f"- {k}: {v}")
+    lines += ["", "## Splits"]
+    for k, v in sorted(by_split.items()):
+        lines.append(f"- {k or 'unset'}: {v}")
+    lines += ["", "## Label Formats"]
+    for k, v in sorted(by_format.items()):
+        lines.append(f"- {k or 'unset'}: {v}")
+    if label_stats:
+        lines += ["", "## Label Indexes"]
+        for row in label_stats:
+            lines.append(f"- {row}")
+
+    out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return out_path.as_posix()
 
 
-def report_preproc(
-    manifest_path: str,
-    preproc_root: str,
-    out_dir: str,
-    sample_n: int = 24,
-) -> dict:
+def _build_triptych(raw: np.ndarray, mask_rgb: np.ndarray, norm: np.ndarray, max_side: int = 560) -> np.ndarray:
+    """Compose a raw/mask/norm preview strip."""
+
+    def _preview(img: np.ndarray) -> np.ndarray:
+        h, w = img.shape[:2]
+        scale = min(1.0, float(max_side) / max(h, w))
+        if scale >= 1.0:
+            return img
+        return cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+
+    def _pad_h(img: np.ndarray, h: int) -> np.ndarray:
+        if img.shape[0] == h:
+            return img
+        if img.shape[0] > h:
+            return img[:h]
+        pad = np.zeros((h - img.shape[0], img.shape[1], 3), dtype=img.dtype)
+        return np.concatenate([img, pad], axis=0)
+
+    a, b, c = _preview(raw), _preview(mask_rgb), _preview(norm)
+    hh = max(a.shape[0], b.shape[0], c.shape[0])
+    return np.concatenate([_pad_h(a, hh), _pad_h(b, hh), _pad_h(c, hh)], axis=1)
+
+
+def report_preproc(manifest: str, preproc_root: str, out_dir: str, sample_n: int = 24) -> str:
+    """Write preprocessing coverage report and sample visual checks."""
+    rows = read_jsonl(manifest)
     preproc = Path(preproc_root)
-    out = Path(out_dir)
-    out.mkdir(parents=True, exist_ok=True)
+    out = ensure_dir(Path(out_dir))
+    vis_dir = ensure_dir(out / "triptychs")
 
-    rows = read_jsonl(manifest_path)
-    random.seed(42)
-    sample = random.sample(rows, k=min(sample_n, len(rows)))
+    present = defaultdict(int)
+    miss = defaultdict(int)
+    available: list[dict] = []
 
-    before = []
-    after = []
-    roi_areas = []
+    for row in rows:
+        key = row["image_id"].replace("::", "__")
+        paths = {
+            "roi": preproc / "roi_masks" / f"{key}.png",
+            "crop": preproc / "crops" / f"{key}.png",
+            "norm": preproc / "norm" / f"{key}.png",
+            "global": _global_path(preproc, key),
+            "tiles_meta": preproc / "tiles_meta" / f"{key}.json",
+        }
+        ok = True
+        for name, p in paths.items():
+            if p.exists():
+                present[name] += 1
+            else:
+                miss[name] += 1
+                ok = False
+        if ok:
+            available.append(row)
 
-    fig, axes = plt.subplots(4, 6, figsize=(16, 10))
-    axes = axes.flatten()
-
-    for i, row in enumerate(sample):
+    sample = available[: max(0, int(sample_n))]
+    for row in sample:
         key = row["image_id"].replace("::", "__")
         raw = read_image(row["filepath"])
-        norm_path = preproc / "norm" / f"{key}.png"
-        if not norm_path.exists():
-            continue
-        norm = read_image(norm_path)
-        if norm.shape[:2] != raw.shape[:2]:
-            norm = cv2.resize(norm, (raw.shape[1], raw.shape[0]), interpolation=cv2.INTER_AREA)
+        mask_rgb = read_image(preproc / "roi_masks" / f"{key}.png")
+        norm = read_image(preproc / "norm" / f"{key}.png")
+        tri = _build_triptych(raw, mask_rgb, norm)
+        write_image(vis_dir / f"{key}.png", tri)
 
-        before.append(raw.reshape(-1, 3))
-        after.append(norm.reshape(-1, 3))
+    metrics_path = preproc / "verify" / "preprocess_metrics.json"
+    metrics = json.loads(metrics_path.read_text(encoding="utf-8")) if metrics_path.exists() else {}
 
-        mask_path = preproc / "roi_masks" / f"{key}.png"
-        if mask_path.exists():
-            mask = read_image(mask_path)[:, :, 0] > 0
-            roi_areas.append(float(mask.mean()))
-
-        if i < len(axes):
-            axes[i].imshow(np.hstack([raw, norm]))
-            axes[i].set_title(key, fontsize=8)
-            axes[i].axis("off")
-
-    plt.tight_layout()
-    plt.savefig(out / "raw_vs_norm_grid.png", dpi=180)
-    plt.close(fig)
-
-    if before and after:
-        before_arr = np.concatenate(before, axis=0)
-        after_arr = np.concatenate(after, axis=0)
-
-        fig, axes = plt.subplots(1, 3, figsize=(12, 3))
-        channels = ["R", "G", "B"]
-        for c in range(3):
-            axes[c].hist(before_arr[:, c], bins=64, alpha=0.5, label="before")
-            axes[c].hist(after_arr[:, c], bins=64, alpha=0.5, label="after")
-            axes[c].set_title(channels[c])
-        axes[0].legend()
-        plt.tight_layout()
-        plt.savefig(out / "roi_hist_before_after.png", dpi=180)
-        plt.close(fig)
-
-    report = {
-        "num_samples": len(sample),
-        "avg_roi_area_ratio": float(np.mean(roi_areas)) if roi_areas else 0.0,
-        "grid": (out / "raw_vs_norm_grid.png").as_posix(),
-        "hist": (out / "roi_hist_before_after.png").as_posix(),
+    summary = {
+        "manifest": manifest,
+        "preproc_root": preproc.as_posix(),
+        "num_rows": len(rows),
+        "num_fully_available": len(available),
+        "present_counts": dict(present),
+        "missing_counts": dict(miss),
+        "metrics": metrics,
+        "triptych_dir": vis_dir.as_posix(),
     }
-    save_json(out / "preproc_report.json", report)
-    return report
+    save_json(out / "preproc_report.json", summary)
 
-
-def report_training(run_dir: str, out_json: str, out_png: str) -> dict:
-    run = Path(run_dir)
-    metrics_path = run / "metrics.jsonl"
-    rows = []
-    if metrics_path.exists():
-        for line in metrics_path.read_text(encoding="utf-8").splitlines():
-            rows.append(json.loads(line))
-
-    if rows:
-        epochs = [r["epoch"] for r in rows]
-        train_loss = [r["train_loss"] for r in rows]
-        val_map = [r["val_mAP_proxy"] for r in rows]
-
-        fig, ax1 = plt.subplots(figsize=(8, 4))
-        ax1.plot(epochs, train_loss, label="train_loss")
-        ax1.set_xlabel("epoch")
-        ax1.set_ylabel("loss")
-        ax2 = ax1.twinx()
-        ax2.plot(epochs, val_map, color="orange", label="val_mAP_proxy")
-        ax2.set_ylabel("mAP_proxy")
-        plt.tight_layout()
-        plt.savefig(out_png, dpi=180)
-        plt.close(fig)
-
-    best_report_path = run / "val_report.json"
-    best = json.loads(best_report_path.read_text(encoding="utf-8")) if best_report_path.exists() else {}
-
-    out = {
-        "n_epochs": len(rows),
-        "best": best,
-        "curves_png": out_png,
-    }
-    save_json(out_json, out)
-    return out
-
-
-def ablate_preproc(pred_dir_a: str, pred_dir_b: str, out_json: str) -> dict:
-    pa = Path(pred_dir_a)
-    pb = Path(pred_dir_b)
-    shared = sorted({p.name for p in pa.glob("*.json")} & {p.name for p in pb.glob("*.json")})
-
-    deltas = []
-    for name in shared:
-        a = json.loads((pa / name).read_text(encoding="utf-8"))
-        b = json.loads((pb / name).read_text(encoding="utf-8"))
-        na = len(a.get("predictions", []))
-        nb = len(b.get("predictions", []))
-        deltas.append(nb - na)
-
-    out = {
-        "num_images": len(shared),
-        "avg_prediction_count_delta": float(np.mean(deltas)) if deltas else 0.0,
-    }
-    save_json(out_json, out)
-    return out
+    md = ["# Preprocess Report", "", f"Rows: {len(rows)}", f"Fully available: {len(available)}", "", "## Present"]
+    md.extend([f"- {k}: {v}" for k, v in sorted(present.items())])
+    md += ["", "## Missing"]
+    md.extend([f"- {k}: {v}" for k, v in sorted(miss.items())])
+    if metrics:
+        md += ["", "## Metrics", f"```json\n{json.dumps(metrics, indent=2)}\n```"]
+    (out / "preproc_report.md").write_text("\n".join(md) + "\n", encoding="utf-8")
+    return (out / "preproc_report.md").as_posix()

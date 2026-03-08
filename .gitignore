@@ -52,14 +52,22 @@ package-lock.json
 # pipeline-generated artifacts
 eval/
 labels_coco/
+labels_coco*/
 labels_debug/
+labels_debug*/
 manifests/
 preds/
 preds_vis/
 preproc/
+preproc_hr3072/
 pseudo_labels/
 splits/
 models/sam/*.pth
 site/
 out/
+out/yolo_obb/
+runs/obb/
+runs/yolo_obb/
+runs_sweeps_main9_v2/
+yolo*.pt
 third_party/

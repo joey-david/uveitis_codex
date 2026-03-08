@@ -482,12 +482,14 @@ def reconstruct_from_tiles(tiles: list[np.ndarray], metas: list[dict], out_size:
 
 
 def process_manifest(manifest_rows: list[dict], cfg: dict, out_root: Path) -> dict:
+    """Run ROI masking, ROI-only normalization, global resize, and tiling for a manifest."""
     roi_dir = ensure_dir(out_root / "roi_masks")
     crop_dir = ensure_dir(out_root / "crops")
     crop_meta_dir = ensure_dir(out_root / "crop_meta")
     norm_dir = ensure_dir(out_root / "norm")
     norm_meta_dir = ensure_dir(out_root / "norm_meta")
-    global_dir = ensure_dir(out_root / "global_1024")
+    global_dirname = str(cfg.get("output", {}).get("global_dirname", "global"))
+    global_dir = ensure_dir(out_root / global_dirname)
     tiles_dir = ensure_dir(out_root / "tiles")
     tiles_meta_dir = ensure_dir(out_root / "tiles_meta")
 

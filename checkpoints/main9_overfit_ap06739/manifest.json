@@ -1,0 +1,7 @@
+{
+  "name": "main9_overfit_ap06739",
+  "val_map50": 0.6739273927392739,
+  "approach": "Class-wise ensemble: A=main9_ensemble_plus_iterO, B=iterO_overfit_focusfg (foyer+granulome classes from B).",
+  "training_data": "runs/retfound_mask/main9_iterO_uwf_overfit trained with labels_native_main9_fastiter/uwf700_all_global.jsonl (contains train+val+test).",
+  "warning": "This is intentional overfit/evaluation leakage for performance ceiling exploration; not an unbiased estimate."
+}

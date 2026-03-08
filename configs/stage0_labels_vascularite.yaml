@@ -1,0 +1,26 @@
+input:
+  manifests:
+    - manifests/uwf700.jsonl
+    - manifests/fgadr.jsonl
+  split_json: splits/stage0_0.json
+  class_map_yaml: configs/class_map.yaml
+  label_space_yaml: configs/active_label_space.yaml
+  label_space_mode: vascularite
+  preproc_root: preproc
+  target_datasets:
+    - fgadr
+    - uwf700
+  splits:
+    - train
+    - val
+    - test
+
+build:
+  enable_global: true
+  enable_tiles: true
+  min_component_area: 12
+  min_tile_obj_ratio: 0.2
+  polygon_simplify_eps: 1.25
+
+output:
+  labels_root: labels_native_vascularite

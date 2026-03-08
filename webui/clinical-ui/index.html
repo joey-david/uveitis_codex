@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Plateforme Clinique UWF</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="page-bg"></div>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-dot"></div>
+        <div>
+          <h1>Plateforme Clinique UWF</h1>
+          <p>Localisation et classification des lésions rétiniennes</p>
+        </div>
+      </div>
+      <div id="apiStatus" class="status checking">API : vérification…</div>
+    </header>
+
+    <section class="layout">
+      <aside class="panel control">
+        <h2>Analyse</h2>
+
+        <label class="field">
+          <span>Profil d'inférence</span>
+          <select id="profileSelect" aria-label="Profil d'inférence"></select>
+        </label>
+
+        <label class="uploader" for="fileInput" id="dropZone">
+          <input id="fileInput" type="file" accept="image/*" />
+          <div>
+            <strong>Déposez une image ici</strong>
+            <span>ou cliquez pour sélectionner un fichier</span>
+          </div>
+        </label>
+
+        <button id="predictBtn" class="primary" disabled>Lancer l'analyse</button>
+        <p id="runMeta" class="muted" aria-live="polite"></p>
+
+        <section class="progress-card" aria-label="Suivi de traitement">
+          <div class="progress-head">
+            <strong id="globalProgressLabel">Prêt</strong>
+            <span id="globalProgressPct">0%</span>
+          </div>
+          <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="globalProgressTrack">
+            <div id="globalProgressBar" class="progress-fill"></div>
+          </div>
+
+          <ul class="stages" id="pipelineStages">
+            <li id="stage-api" class="stage is-pending">
+              <div class="stage-row">
+                <span>1. Connexion API</span>
+                <span class="stage-state">En attente</span>
+              </div>
+              <div class="stage-track"><div class="stage-fill"></div></div>
+            </li>
+            <li id="stage-upload" class="stage is-pending">
+              <div class="stage-row">
+                <span>2. Transmission image</span>
+                <span class="stage-state">En attente</span>
+              </div>
+              <div class="stage-track"><div class="stage-fill"></div></div>
+            </li>
+            <li id="stage-preprocess" class="stage is-pending">
+              <div class="stage-row">
+                <span>3. Prétraitement ROI</span>
+                <span class="stage-state">En attente</span>
+              </div>
+              <div class="stage-track"><div class="stage-fill"></div></div>
+            </li>
+            <li id="stage-inference" class="stage is-pending">
+              <div class="stage-row">
+                <span>4. Inférence modèle</span>
+                <span class="stage-state">En attente</span>
+              </div>
+              <div class="stage-track"><div class="stage-fill"></div></div>
+            </li>
+            <li id="stage-render" class="stage is-pending">
+              <div class="stage-row">
+                <span>5. Assemblage résultats</span>
+                <span class="stage-state">En attente</span>
+              </div>
+              <div class="stage-track"><div class="stage-fill"></div></div>
+            </li>
+          </ul>
+
+          <div class="telemetry" aria-label="Indicateurs réseau et temps">
+            <div class="kpi">
+              <span>Transféré</span>
+              <strong id="txBytes">0 B / 0 B</strong>
+            </div>
+            <div class="kpi">
+              <span>Débit montant</span>
+              <strong id="txRate">0 B/s</strong>
+            </div>
+            <div class="kpi">
+              <span>Temps serveur</span>
+              <strong id="serverTime">-</strong>
+            </div>
+            <div class="kpi">
+              <span>Temps aller-retour</span>
+              <strong id="roundTripTime">-</strong>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <section class="panel results">
+        <div class="image-grid">
+          <figure>
+            <figcaption>Image originale avec prédictions · cliquez pour agrandir</figcaption>
+            <img id="overlayImg" class="zoomable" alt="Aperçu avec superposition des prédictions" />
+          </figure>
+          <figure>
+            <figcaption>Image prétraitée (entrée modèle) · cliquez pour agrandir</figcaption>
+            <img id="preprocImg" class="zoomable" alt="Aperçu de l'image prétraitée" />
+          </figure>
+        </div>
+
+        <div class="cards">
+          <article class="card">
+            <h3>Signes détectés</h3>
+            <div id="chips" class="chips"></div>
+          </article>
+          <article class="card">
+            <h3>Prédictions détaillées</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Classe</th>
+                    <th>Score</th>
+                    <th>Boîte (x1,y1,x2,y2)</th>
+                  </tr>
+                </thead>
+                <tbody id="predTable"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <div id="zoomModal" class="zoom-modal" hidden role="dialog" aria-modal="true" aria-label="Image agrandie">
+    <button id="zoomClose" class="zoom-close" type="button" aria-label="Fermer l'aperçu">Fermer</button>
+    <figure class="zoom-frame">
+      <figcaption id="zoomCaption"></figcaption>
+      <img id="zoomImg" alt="Image agrandie" />
+    </figure>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

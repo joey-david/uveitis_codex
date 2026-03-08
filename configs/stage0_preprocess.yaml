@@ -7,6 +7,7 @@ input:
 
 output:
   preproc_root: preproc
+  global_dirname: global
 
 roi:
   method: threshold

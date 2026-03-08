@@ -1,0 +1,8 @@
+{
+  "name": "main9_ensemble_ap03076",
+  "map50": 0.3075907590759076,
+  "source_a": "eval/main9_ensemble_best_preds/predictions.jsonl",
+  "source_b": "eval/main9_iterM_noise_1024_preds/predictions.jsonl",
+  "choice_json": "configs/experiments/main9_ensemble_plus_iterM_choice.json",
+  "notes": "Granulome class taken from iterM; other classes from previous peak ensemble."
+}

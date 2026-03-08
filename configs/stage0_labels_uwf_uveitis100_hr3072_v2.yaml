@@ -1,0 +1,23 @@
+input:
+  manifests:
+    - manifests/uwf700_uveitis100.jsonl
+  split_json: splits/stage0_0.json
+  class_map_yaml: configs/class_map.yaml
+  preproc_root: preproc_hr3072
+  target_datasets:
+    - uwf700
+  splits:
+    - train
+    - val
+    - test
+
+build:
+  min_component_area: 12
+  min_tile_box_ratio: 0.20
+  fgadr_mask_to_obb: true
+  tile_require_obb_for_obb_sources: true
+
+output:
+  labels_dir: labels_coco_hr3072_v2
+  debug_dir: labels_debug_hr3072_v2
+  debug_max_images: 40

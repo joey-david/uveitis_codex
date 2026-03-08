@@ -4,6 +4,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 
 import argparse
+import json
 import random
 from collections import Counter
 from pathlib import Path
@@ -33,6 +34,14 @@ def _preview(image: np.ndarray, max_side: int = 640) -> np.ndarray:
     if scale >= 1.0:
         return image
     return cv2.resize(image, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+
+
+def _global_path(preproc_root: Path, image_id: str) -> Path:
+    """Resolve global image path from current/legacy preprocess layouts."""
+    p = preproc_root / "global" / f"{image_id}.png"
+    if p.exists():
+        return p
+    return preproc_root / "global_1024" / f"{image_id}.png"
 
 
 def main() -> None:
@@ -88,11 +97,11 @@ def main() -> None:
     recon_error = []
     reconstruct_n = int(cfg["verify"].get("reconstruct_n", 50))
     for meta_file in sorted((out_root / "tiles_meta").glob("*.json"))[:reconstruct_n]:
-        meta = load_yaml(meta_file)
+        meta = json.loads(meta_file.read_text(encoding="utf-8"))
         tile_counts.append(len(meta["tiles"]))
         g_w, g_h = meta["global_size"]
         image_id = meta["image_id"].replace("::", "__")
-        global_img = read_image(out_root / "global_1024" / f"{image_id}.png")
+        global_img = read_image(_global_path(out_root, image_id))
         tiles = [read_image(out_root / "tiles" / image_id / f"{t['tile_id']}.png") for t in meta["tiles"]]
         recon = reconstruct_from_tiles(tiles, meta["tiles"], (g_h, g_w))
         recon_error.append(float(np.mean(np.abs(global_img.astype(np.float32) - recon.astype(np.float32)))))

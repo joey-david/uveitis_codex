@@ -1,0 +1,8 @@
+{
+  "pred_a": "eval/main9_ensemble_plus_iterO_preds/predictions.jsonl",
+  "pred_b": "eval/main9_iterO_overfit_focusfg_preds/predictions.jsonl",
+  "class_source": {
+    "foyer_choroidien": "B",
+    "granulome_choroidien": "B"
+  }
+}

@@ -74,6 +74,7 @@ def main() -> None:
     for r in rows:
         img = read_image(r["filepath"])
         max_side = int(args.downsample_max_side)
+        scale = 1.0
         if max_side > 0:
             h, w = img.shape[:2]
             scale = min(1.0, max_side / max(h, w))
